@@ -200,3 +200,6 @@ v0.14 - 2022-02-04 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     wrong, because as shown in plot_elevels_vs_field.py, the character of the 
     eigenstates becomes mixed. How does this affect line broadening? Also this 
     would likely effect angular dependendence.
+
+v0.15.0 - 2022-12-17 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- no changes, but uploaded for public distribution to github
