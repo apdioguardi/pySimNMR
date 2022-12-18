@@ -1,0 +1,202 @@
+This is the changelog for pySimNMR.
+
+Please increment the version number if you make any changes.
+
+Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
+
+###############################################################################
+###############################################################################
+
+
+v0.1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Initial version includes the base class SimNMR within pySimNMR.py as well as 
+a powder pattern simulation program PlotPowderSpectrum.py.
+
+
+v0.2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added capability to modify broadening of satellite transitions independent 
+of overall magnetic broadening. This only currently works for 2nd order mode.
+Also fixed a bug in the convolution function such that the gaussian or lor 
+kernel is normalized producing an output with the same integrated area as 
+the input, though have not tested this other than checking visually against 
+v0.1.
+
+- Found a couple of other bugs with respect to saving files that I had not 
+previously tested and fixed them.
+
+- File saving bug is fixed.
+
+
+v0.3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Changed name of 'PlotPowderSpectrum.py' to 'PlotFreqPowderSpectrum.py' in 
+preparation for implementing field-swept powder pattern simulation.
+
+- Added a new script for calculating a single isotope, single crystal 
+frequency spectrum: 'PlotFreqSpectrum.py'
+    * this script only uses exact diagonalization for now, but I can't see 
+    a good reason for implementing 2nd ord pert as it is not slow.
+
+- Implemented satellite convolutional broadening proportional to the 
+transition as in v0.2 for exact diagonalization. 
+    * This has introduced a 'bug' where if the matrix element minimum 
+    value is set too low, disallowed transitions will appear and cause 
+    the simulation to fail if satellite broadening is attempted. 
+    * My current understanding is that these transitions are most likely 
+    unphysical, however in the regime where the Zeeman interaction and the 
+    nuclear quadruple interaction are on the same order of magnitude, the 
+    transition probabilities begin to get quite small. 
+    * If your simulations lie in this regime, then you will need to proceed 
+    without additional quadrupolar broadening. Disable quadrupolar broadening 
+    by setting FWHM_dvQ_MHz = 0.0 (the program does not perform the 
+    quadrupolar convolution for FWHM_dvQ_MHz < 1e-6 MHz). 
+    * The method for getting the transition number involves using the 
+    matricies of eigenvectors U and Ui = ConjugateTranspose(U) and operating 
+    on Iz --> Ui.Iz.U. The resulting matrix is diagonal with the Iz values 
+    moved to be associated with the correct eigenvalues (I checked carefully 
+    for many possible input values or rotation angles, and also with powder 
+    patterns). HOWEVER, I do not fully understand why this works. If anyone 
+    wants to play with this more, or develops an elegant proof, then please 
+    contact me (Adam) :)
+
+
+v0.4 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Added the script 'PlotFreqSpectrumVsAngle.py' for plotting exact diag. 
+calculation, plotting, and exporting of angular dependendent quadrupolar NMR
+frequency spectra.
+
+
+v0.5 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- update version counter of PlotFreqSpectrum, PlotFreqPowderSpectrum to v0.2
+
+- when loading an experimantal data file you now have to specify the frequency
+    and magnitude columns by hand. This way all existing experimental files
+    may be used without changing them.
+
+- changed error in block: 
+    if sim_export_file=='':
+        save_files_bool=False
+    else:
+        sim_export_file=True
+    changed to: 
+    if sim_export_file=='':
+        save_files_bool=False
+    else:
+        save_files_bool=True
+
+- added background. It is now possible to simulat the spectrum with background.
+    Right now there are three possibilities: constant offset, linear background,
+    gaussian background.
+    modifications v0.5 by Peter
+
+
+v0.6 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- incorporated Piotrs background plotting into Adams new scripts
+- added various new plotting scripts so now we have the following:
+    -> plot_field_powder_spectrum.py
+    -> plot_field_spectrum_multisite.py
+    -> plot_freq_powder_spectrum.py
+    -> plot_freq_spectrum_multisite.py
+    -> plot_freq_vs_angle.py
+    -> plot_freq_vs_eta.py
+- in the new scripts there is more control of the plotting
+    -> x and y scaling of the experimental data,
+    -> plot range controls
+    -> switches from plotting sum/individual spectra
+- plot_freq_spectrum_multisite.py includes internal hyperfine field simulation
+    (exact diag)
+- powder pattern plotting allows for multiple sites/nuclei
+- cleaned up the plot output interface to allow for a legend to the right of 
+    the plot that shows all relevant parameters and control of the plot-to-legend
+    size ratio
+- various bug fixes
+
+** to do, clean up the scripts that do not include a legend
+** deal with matrix element issues/repeated identical low intensity transition
+    in exact diag
+** add exact diag field swept spectra
+** least squares fitting via lmfit package [I (Ich bin Adam) already have this
+    but it does not exist in a user-friend form]
+
+
+v0.7 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- add 'plot_freq_vs_field.py' for plotting frequency vs field of NMR spectra 
+    (exact diag)
+- allow for direct input of va,vb,vc OR vc and eta into the exact diag 
+    pySimNMR.SimNMR.freq_prob_trans_ed()
+- began working on state mixing coefficients for quadrupolar NMR
+
+
+v0.8 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- begin to add least squares fitting to the package (starting with 
+    plot_freq_spectrum_multisite_lsqfit.py)
+
+
+v0.9 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- moved isotope dictionary to separate file and add citations/reference 
+    compounds + 23Na
+
+
+v0.10 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- added method: pySimNMR.sec_ord_freq_spec() and implemented this method as an
+    option in plot_freq_spectrum_multisite.py (still need to add quadrupolar
+    broadening via convolution)
+- fixed a bug in field_spec_edpp where freq_prob_trans_ed_HS was expecting
+    va=None and vb=None if only vc and eta were defined
+- found a problem with 2nd order perturbation theory field sweep simulation so
+    disabled this option. solved one problem that came from a factor-of-two error
+    in the Bauger paper, but angular dependence still is broken and needs further
+    troubleshooting and comparison to real data; likely a problem with the
+    definition of the euler angles OR the fact that these equations were
+    originally solved for the case of Kc > Kb > Ka and may need to be
+    rederived/checked
+
+
+v0.11 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- fixed a mistake found by Raphael where the exact diag euler angle rotations
+    were performed as extrinsic rotations (about fixed axes z x z) instead of the
+    intended intrinsic rotations about z x' z'. See :
+    Euler_angle_testing_for_pySimNMR_2020-08-07.ipynb 
+    in the development folder for further details
+- cleaned up some of the code to follow pep8 better. still need to do more...
+- modified the multi-site plotting to make things easier to visualize by
+    using 'fill' with an alpha value (transparency) instead of 'plot' in pyplot
+- replaced numpy.loadtxt with numpy.genfromtxt for better handling of missing
+    values
+
+
+v0.12 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- added fit_freq_spectrum_multisite.py and dependencies. Additional parameter 
+    customization can still be improved (per-resonance peak for example), but
+    now we have a great starting point that properly performs curve fitting 
+    of spectra produced by exact diagonalization.
+- the above required addition of the gaussian, lorentzian, and freq_spec_ed 
+    function within pySimNMR.py
+- creating a fitting program for angular-dependent frequency-swept spectra 
+    is also now possible using the freq_spec_ed function
+- however, exact diagonalization + fitting field-swept spectra will require a 
+    clever solution to implement, because the objective function is nonlinear.
+    That is, we produce the field-swept spectra using field_spec_edpp which 
+    creates a histogram and we already have trouble using it and supressing 
+    spurious extra peaks that are close together.
+
+v0.13 - 2021-10-21 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- fixed comments on how to hold fit coefficients equal to each other
+- tested multi-site fitting after Hajo found a problem with it, will leave the 
+    testing files in there so a working example is readily available
+    
+v0.14 - 2022-02-04 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- found issues with spectral simulation with internal fields. tracked the 
+    problem to freq_prob_trans_ed and how it was allowing certain zero-frequency
+    transitions as well as identical transitions. decided to remove the negative
+    frequency and zero-frequency transitions. Have not tested fully, but now 
+    can do curve fitting for zero-field NMR of CrCl3 at 1.4 K.
+- should test further with other plotting and fitting, but for now the problem
+    with fit_freq_spectrum_multisite.py is solved and the number of transitions
+    and transition index for quadrupolar broadening now match. note this is still
+    wrong, because as shown in plot_elevels_vs_field.py, the character of the 
+    eigenstates becomes mixed. How does this affect line broadening? Also this 
+    would likely effect angular dependendence.
