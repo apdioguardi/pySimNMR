@@ -194,7 +194,7 @@ v0.14 - 2022-02-04 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     transitions as well as identical transitions. decided to remove the negative
     frequency and zero-frequency transitions. Have not tested fully, but now 
     can do curve fitting for zero-field NMR of CrCl3 at 1.4 K.
-- should test further with other plotting and fitting, but for now the problem
+- should test further with other plotting and fitting, but fosr now the problem
     with fit_freq_spectrum_multisite.py is solved and the number of transitions
     and transition index for quadrupolar broadening now match. note this is still
     wrong, because as shown in plot_elevels_vs_field.py, the character of the 
@@ -203,3 +203,5 @@ v0.14 - 2022-02-04 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 v0.15.0 - 2022-12-17 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - no changes, but uploaded for public distribution to github
+
+test
