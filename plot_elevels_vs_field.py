@@ -197,7 +197,7 @@ sim_y = elevels_fields[:,1] # frequency
 # plt.show()
 
 
-cmap = matplotlib.cm.get_cmap(color_map_name)
+cmap = plt.get_cmap(color_map_name)
 
 rgba_colors=np.empty(shape=(sim_x.shape[0],4))
 
@@ -284,7 +284,7 @@ leg = lax.legend(h,l,borderaxespad=0.)
 leg.set_title(title=legend_title_str, prop = {'size':'small'})
 
 # make the legend show the colors with no alpha
-for lh in leg.legendHandles: 
+for lh in leg.legend_handles: 
     lh.set_alpha(1)
 
 lax.axis("off")

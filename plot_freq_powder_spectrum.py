@@ -28,40 +28,40 @@ import os.path
 
 ##----NMR Parameters-----------------------------------------------------------
 n = 1
-isotope_list = ['75As']*n             # need to add many nuclei to the dictionary still... program will fail if not added at this stage of development
-site_multiplicity_list = [1.5]*n               # scales individual relative intensities of the summed powder patterns
-Ka_list = [-0.05]*n                      # shift tensor elements (units = percent)
-Kb_list = [-0.05]*n
-Kc_list = [-0.05]*n
+isotope_list = ['63Cu']             # see isotopeDict.py for names of nuclear species, typically nucleon number and element, unless some special reference, eg As from the Fe-based SC literature
+site_multiplicity_list = [1]*n               # scales individual relative intensities of the summed powder patterns
+Ka_list = [0.01]*n                      # shift tensor elements (units = percent)
+Kb_list = [0.01]*n
+Kc_list = [0.01]*n
 va_list = [None]*n
 vb_list = [None]*n
-vc_list = [1.0]                          # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [0.1]                       # unitless
+vc_list = [25.98]*n                          # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [0.01]*n                       # unitless
 
-H0 = 7 # magnetic field  (units = T)
+H0 = 10 # magnetic field  (units = T)
 
 ##----Simulation control-------------------------------------------------------
 sim_type = 'exact diag'        # options are 'exact diag' and '2nd order'
-min_freq = 48                 # units = MHz, note should make this apply for 2nd order as well.
-max_freq = 55                # units = MHz
+min_freq = 75                 # units = MHz, note should make this apply for 2nd order as well.
+max_freq = 150                # units = MHz
 n_freq_points = 1e4            # number of bins for the histogram
 convolution_function_list = ['gauss']*n  # 'gauss' and 'lor' are implemented
-conv_FWHM_list = [0.004]*n      # correct value here should be scaled down for the lower field... check with hajo          # gaussian or lorentzian of FWHM conv_FWHM (units = MHz)
-conv_vQ_FWHM_list = [0.0001]*n              # gaussian or lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
-mtx_elem_min = 0.5              # exact diagonalization only. In general 0.5 is a good starting point. This may cause issues with conv_vQ_FWHM, can resolve by increasing mtx_elem_min
+conv_FWHM_list = [0.5]*n      # correct value here should be scaled down for the lower field... check with hajo          # gaussian or lorentzian of FWHM conv_FWHM (units = MHz)
+conv_vQ_FWHM_list = [0.5]*n              # gaussian or lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
+mtx_elem_min = 0.01             # exact diagonalization only. In general 0.5 is a good starting point. This may cause issues with conv_vQ_FWHM, can resolve by increasing mtx_elem_min
 recalc_random_samples = False     # if True, calculate fresh random angle sampling; if False, use the samples from saved (only relevant for exact diag)
-n_samples = 1.9e5                 # good exact diag powder spectra at roughly 1e5 (for very fast calcs). 2nd ord pert much faster so 1e7 possible
+n_samples = 1e5                 # good exact diag powder spectra at roughly 1e5 (for very fast calcs). 2nd ord pert much faster so 1e7 possible
                                 # NOTE: the saved binary files are actually the stacked arrays of rotation matrices and can get quite large (hundreds of MB) and 
                                 # memory issues can arrise here...
 
 ##----Background control-------------------------------------------------------
 bgd = [0]          #[0] = no background
-                                #[offset] = constant background
-                                #[offset, slope] = linear background
-                                #[center, width, intensity] = gaussian background
+                   #[offset] = constant background
+                   #[offset, slope] = linear background
+                   #[center, width, intensity] = gaussian background
 
 ##----Plotting data from data File---------------------------------------------
-exp_data_file = 'D:\ifw\code\python\pySimNMR\development\Haase_three_halves_+51.0433.txt'      # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
+exp_data_file = '' #D:\ifw\code\python\pySimNMR\development\Haase_three_halves_+51.0433.txt'      # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
 number_of_header_lines = 1        # number of lines which are ignored in the begining of the data file
 exp_data_delimiter = ','          # tell numpy which delimter your experimental data file has 
 exp_x_scaling = 1               # to scale the experimental data to MHz if units don't match

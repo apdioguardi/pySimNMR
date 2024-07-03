@@ -55,7 +55,7 @@ n_fields = 1000                   # number of eta value (x axis points)
 #field_array=np.array([0.01,0.05,0.1,0.5,1.0,5.0])
 
 
-mtx_elem_min = 1e-10            # In general 0.5 is a good starting point
+mtx_elem_min = 1e-3            # In general 0.5 is a good starting point
 
 ##----Plot control-------------------------------------------------------
 plot_legend_width_ratio=[6,1]

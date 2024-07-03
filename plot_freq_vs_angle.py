@@ -28,48 +28,41 @@ import platform
 ### PARAMETERS ################################################################
 
 ##----NMR Parameters-----------------------------------------------------------
-isotope_list = ['31P','31P','31P','31P','31P','31P']      #add possibility of directly inputting the gamma here... for esr or some different standard.
+isotope_list = ['73Ge']      #add possibility of directly inputting the gamma here... for esr or some different standard.
+n = len(isotope_list)
+Ka_list = [0]*n                 # shift tensor elements (units = percent)
+Kb_list = [0]*n
+Kc_list = [0]*n
 
-Ka_list = [-0.041] * 6                 # shift tensor elements (units = percent)
-Kb_list = [-0.041] * 6
-Kc_list = [-0.041] * 6
+va_list = [None]*n              # two modes: va and vb=None and eta=number OR 
+vb_list = [None]*n              # va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
+vc_list = [0.25]*n             # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [0]*n         # asymmetry parameter (unitless)
 
-va_list = [None] * 6               # two modes: va and vb=None and eta=number OR 
-vb_list = [None] * 6               # va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
-vc_list = [0] * 6             # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [0] * 6          # asymmetry parameter (unitless)
-
-H0 = 7.042241319447235                         # magnetic field  (units = T)
+H0 = 25                         # magnetic field  (units = T)
                                     # the angles in the following lists are initial condition rotations of the shift tensor, EFG tensor, and Hint vector,
                                     # simulation control below allows one to set the axis of rotation and 
 
-phi_z_offset= 180+90 - 6.5 #90 + 2.5
-theta_x_prime_offset= 180+7 #90 + 3 #
-psi_z_prime_offset= 180+90 - 25 # 90 + 0
+phi_z_deg_init_list = [0]             # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
+theta_x_prime_deg_init_list = [0]*n    # Range: (0-180) these values are in degrees and converted to radians in the code
+psi_z_prime_deg_init_list = [0]*n        # Range: (0-360)
 
-phi_z_deg_init_list = [0+phi_z_offset,0+phi_z_offset,60+phi_z_offset,60+phi_z_offset,-60+phi_z_offset,-60+phi_z_offset]             # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
-theta_x_prime_deg_init_list = [theta_x_prime_offset] * 6    # Range: (0-180) these values are in degrees and converted to radians in the code
-psi_z_prime_deg_init_list = [psi_z_prime_offset] * 6        # Range: (0-360)
-
-Hinta_list = [0] * 6                # internal field in a direction (units = T)
-Hintb_list = [0.0105,-0.0105,0.0105,-0.0105,0.0105,-0.0105]                  # ... b 0.009748 +- 0.000111
-Hintc_list = [0] * 6           # ... c
+Hinta_list = [0]*n                # internal field in a direction (units = T)
+Hintb_list = [0]*n                # ... b 0.009748 +- 0.000111
+Hintc_list = [0]*n           # ... c
 
 ##----Simulation control-------------------------------------------------------
-min_freq = 121.2                # units = MHz
-max_freq = 121.7                 # units = MHz
+min_freq = 36                # units = MHz
+max_freq = 38.5                 # units = MHz
 angle_to_vary = 'theta_x_prime_deg'     # 'phi_z_deg', 'theta_x_prime_deg', or 'psi_z_prime_deg'
-angle_start = -10
-angle_stop = 150              # this range will replace the constant given in the NMR Parameters section
-n_angles = 1000                  # number of angles to calculate in the output plot
-mtx_elem_min = 0.5              # In general, 0.5 is a good starting point
+angle_start = 0
+angle_stop = 90              # this range will replace the constant given in the NMR Parameters section
+n_angles = 150                  # number of angles to calculate in the output plot
+mtx_elem_min = 0.1              # In general, 0.5 is a good starting point
 
 ##----Plotting data from data File---------------------------------------------
-if platform.system()=='Darwin':
-    exp_data_file='/Users/apd/gd/data_and_analysis/TPS3/NiPS3/7T_system_data/rotation_150K_sample2/sims/AFM_outofplane_rot_all.txt'                # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as angle in degrees, second as frequency
-elif platform.system()=='Windows':
-    exp_data_file='D:\\gd\\data_and_analysis\\TPS3\\NiPS3\\7T_system_data\\rotation_150K_sample2\\sims\\AFM_outofplane_rot_all.txt'
-number_of_header_lines=1        # number of lines which are ignored in the begining of the data file
+exp_data_file=''                # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as angle in degrees, second as frequency
+number_of_header_lines=0        # number of lines which are ignored in the begining of the data file
 exp_data_delimiter=' '          # tell numpy which delimter your experimental data file has 
 angle_offset = 0
 
@@ -82,10 +75,8 @@ y_high_limit=max_freq
 
 ##----Exporting Simulated Spectrum---------------------------------------------
 # if you want to export your simulation, enter the path to the file here, otherwise write exportfile = ''
-if platform.system()=='Darwin':
-    sim_export_file='/Users/apd/gd/data_and_analysis/TPS3/NiPS3/7T_system_data/rotation_150K_sample2/sims/test.txt' 
-elif platform.system()=='Windows':
-    sim_export_file='D:\\gd\\data_and_analysis\\TPS3\\NiPS3\\7T_system_data\\rotation_150K_sample2\\sims\\test.txt'
+sim_export_file='' #'freq_vs_angle_CeRh6Ge4_Ge(1).txt'
+
 ###############################################################################
 ###############################################################################
 
@@ -152,20 +143,20 @@ else:
     save_files_bool=True
 
 
-angle_array = np.linspace(angle_start*np.pi/180,angle_stop*np.pi/180,int(n_angles))
+angle_array = np.linspace(angle_start*np.pi/180, angle_stop*np.pi/180, int(n_angles))
 
 if angle_to_vary=='phi_z_deg':
-    phi_z = angle_array
-    theta_xp = np.full(shape=angle_array.shape, fill_value=0.0)
-    psi_zp = np.full(shape=angle_array.shape, fill_value=0.0)
+    phi_z_array = angle_array
+    theta_xp_array = np.full(shape=angle_array.shape, fill_value=0.0)
+    psi_zp_array = np.full(shape=angle_array.shape, fill_value=0.0)
 elif angle_to_vary=='theta_x_prime_deg':
-    theta_xp = angle_array
-    phi_z = np.full(shape=angle_array.shape, fill_value=0.0)
-    psi_zp = np.full(shape=angle_array.shape, fill_value=0.0)
+    theta_xp_array = angle_array
+    phi_z_array = np.full(shape=angle_array.shape, fill_value=0.0)
+    psi_zp_array = np.full(shape=angle_array.shape, fill_value=0.0)
 elif angle_to_vary=='psi_z_prime_deg':
-    psi_zp = angle_array
-    phi_z = np.full(shape=angle_array.shape, fill_value=0.0)
-    theta_xp = np.full(shape=angle_array.shape, fill_value=0.0)
+    psi_zp_array = angle_array
+    phi_z_array = np.full(shape=angle_array.shape, fill_value=0.0)
+    theta_xp_array = np.full(shape=angle_array.shape, fill_value=0.0)
 else:
     print("please designate angle_to_vary='phi_z_deg', 'theta_x_prime_deg', or 'psi_z_prime_deg' and try again.")
     print('exiting program...')
@@ -187,63 +178,68 @@ for isotope in isotope_list:
     sim = pySimNMR.SimNMR(isotope)
     
     gamma_list.append(sim.isotope_data_dict[isotope]["gamma_sigfigs"])
-    
-    rz,rzi = sim.rz_matrices(phi_z) #use the built in SimNMR methods to generate the rotation matrices
-    rxp,rxpi = sim.rx_matrices(theta_xp)  # lower case r matrices are for rotation of the shift tensor
-    rzp,rzpi = sim.rz_matrices(psi_zp)
-    Rz,Rzi = sim.Rz_matrices(phi_z)       # capital R matrices are for rotation of the quadurpolar hamiltonian
-    Rxp,Rxpi = sim.Rx_matrices(theta_xp)
-    Rzp,Rzpi = sim.Rz_matrices(psi_zp)
 
-    r = rzp @ rxp @ rz # @ indicates matrix multiplication np.matmul
-    ri = rzi @ rxpi @ rzpi
-    RR = Rzp @ Rxp @ Rz
-    RRi = Rzi @ Rxpi @ Rzpi
+    # use the built in SimNMR methods to generate the rotation matrices
+    # lower case r matrices are for rotation of the shift tensor
+    # SR matrices are for spin-space rotation of the quadrupole Hamiltonian
+    r, ri = sim.generate_r_matrices(phi_z_array,
+                                    theta_xp_array,
+                                    psi_zp_array)
+    SR, SRi = sim.generate_SR_matrices(phi_z_array,
+                                       theta_xp_array,
+                                       psi_zp_array)
+    rotation_matrices = (r, ri, SR, SRi)
 
-    phi_z_init_array = np.array([phi_z_deg_init_list[i]])*np.pi/180
-    theta_xp_init_array = np.array([theta_x_prime_deg_init_list[i]])*np.pi/180
-    psi_zp_init_array = np.array([psi_z_prime_deg_init_list[i]])*np.pi/180
+    phi_z_init_array_i = np.array([phi_z_deg_init_list[i]])*np.pi/180
+    theta_xp_init_array_i = np.array([theta_x_prime_deg_init_list[i]])*np.pi/180
+    psi_zp_init_array_i = np.array([psi_z_prime_deg_init_list[i]])*np.pi/180
     #phi_z_init_array = np.full(shape=angle_array.shape, fill_value=phi_z_deg_init_list[i]*np.pi/180)
     #theta_xp_init_array = np.full(shape=angle_array.shape, fill_value=theta_x_prime_deg_init_list[i]*np.pi/180)
     #psi_zp_init_array = np.full(shape=angle_array.shape, fill_value=psi_z_prime_deg_init_list[i]*np.pi/180)
     
-    rz_init,rzi_init = sim.rz_matrices(phi_z_init_array) #use the built in SimNMR methods to generate the rotation matrices
-    rxp_init,rxpi_init = sim.rx_matrices(theta_xp_init_array)  # lower case r matrices are for rotation of the shift tensor
-    rzp_init,rzpi_init = sim.rz_matrices(psi_zp_init_array)
-    Rz_init,Rzi_init = sim.Rz_matrices(phi_z_init_array)       # capital R matrices are for rotation of the quadurpolar hamiltonian
-    Rxp_init,Rxpi_init = sim.Rx_matrices(theta_xp_init_array)
-    Rzp_init,Rzpi_init = sim.Rz_matrices(psi_zp_init_array)
+    # rz_init,rzi_init = sim.rz_matrices(phi_z_init_array) #use the built in SimNMR methods to generate the rotation matrices
+    # rxp_init,rxpi_init = sim.rx_matrices(theta_xp_init_array)  # lower case r matrices are for rotation of the shift tensor
+    # rzp_init,rzpi_init = sim.rz_matrices(psi_zp_init_array)
+    # Rz_init,Rzi_init = sim.Rz_matrices(phi_z_init_array)       # capital R matrices are for rotation of the quadurpolar hamiltonian
+    # Rxp_init,Rxpi_init = sim.Rx_matrices(theta_xp_init_array)
+    # Rzp_init,Rzpi_init = sim.Rz_matrices(psi_zp_init_array)
 
-    r_init = rzp_init @ rxp_init @ rz_init # @ indicates matrix multiplication np.matmul
-    ri_init = rzi_init @ rxpi_init @ rzpi_init
-    RR_init = Rzp_init @ Rxp_init @ Rz_init
-    RRi_init = Rzi_init @ Rxpi_init @ Rzpi_init
+    # r_init = rzp_init @ rxp_init @ rz_init # @ indicates matrix multiplication np.matmul
+    # ri_init = rzi_init @ rxpi_init @ rzpi_init
+    # RR_init = Rzp_init @ Rxp_init @ Rz_init
+    # RRi_init = Rzi_init @ Rxpi_init @ Rzpi_init
 
-    #ahoy! got to here... and need to do the initial rotation matrices
-    rot_mtx_tuple = (r,ri,RR,RRi)
-    rot_mtx_init_tuple = (r_init,ri_init,RR_init,RRi_init)
-
+    phi_z_init_i = np.array([phi_z_init_array_i[i]])
+    theta_xp_init_i = np.array([theta_xp_init_array_i[i]])
+    psi_zp_init_i = np.array([psi_zp_init_array_i[i]])
+    r_init, ri_init = sim.generate_r_matrices(phi_z_init_i,
+                                              theta_xp_init_i,
+                                              psi_zp_init_i)
+    SR_init, SRi_init = sim.generate_SR_matrices(phi_z_init_i,
+                                                 theta_xp_init_i,
+                                                 psi_zp_init_i)
+    rotation_matrices_init = (r_init, ri_init, SR_init, SRi_init)
 
     f,p,t = sim.freq_prob_trans_ed(H0=H0,
-                                    Ka=Ka_list[i],
-                                    Kb=Kb_list[i],
-                                    Kc=Kc_list[i],
-                                    va=va_list[i],
-                                    vb=vb_list[i],
-                                    vc=vc_list[i],
-                                    eta=eta_list[i],
-                                    rm_SRm_tuple=rot_mtx_tuple,
-                                    rm_Rm_init_tuple=rot_mtx_init_tuple,
-                                    Hinta=Hinta_list[i],
-                                    Hintb=Hintb_list[i],
-                                    Hintc=Hintc_list[i],
-                                    mtx_elem_min=mtx_elem_min,
-                                    min_freq=min_freq,
-                                    max_freq=max_freq)
+                                   Ka=Ka_list[i],
+                                   Kb=Kb_list[i],
+                                   Kc=Kc_list[i],
+                                   va=va_list[i],
+                                   vb=vb_list[i],
+                                   vc=vc_list[i],
+                                   eta=eta_list[i],
+                                   rm_SRm_tuple=rotation_matrices,
+                                   rm_SRm_init_tuple=rotation_matrices_init,
+                                   Hinta=Hinta_list[i],
+                                   Hintb=Hintb_list[i],
+                                   Hintc=Hintc_list[i],
+                                   mtx_elem_min=mtx_elem_min,
+                                   min_freq=min_freq,
+                                   max_freq=max_freq)
 
     #get the isotope with which we are working
-    I0=sim.isotope_data_dict[isotope]["I0"]
-    #integer of the number of resonances we expect (there may be a better way to get this and return
+    I0 = sim.isotope_data_dict[isotope]["I0"]
+    # integer of the number of resonances we expect (there may be a better way to get this and return
     # it from the freq_prob_trans_ed function as perhaps a list of integers each associated with a number,
     # this may be a "bug" if we work in the regime where H_q ~= H_z)
     n_resonances=int(I0*2)
@@ -255,7 +251,8 @@ for isotope in isotope_list:
     # second n_resonances are set to the second angle and so on
     for m in range(n_resonances):
         angle_array_out[m::n_resonances]=angle_array*(180/np.pi)
-
+    # print('angle_array_out,f,p,t:')
+    # print(angle_array_out,f,p,t)
     afpt=np.column_stack((angle_array_out,f,p,t))
 
     afpt_ind_list.append(afpt)
@@ -281,8 +278,37 @@ if exp_data_file!='':
     ax.plot(exp_x,exp_y,"ks")
 
 # plot
+#print('afpt_ind_list')
+#print(afpt_ind_list)
+#mask = (z[:, 0] == 6)
+#z[mask, :]
+# import numpy as np
+# np_array = np.array([[0,4],[0,5],[3,5],[6,8],[9,1],[6,1]])
+# rows=np.where(np_array[:,0]==6)
+# print(np_array[rows])
+#print('central trans only')
+#masky = afpt_ind_list[0][:,3]==0
+#print(afpt_ind_list[0][masky,:])
+
+#marker_style = dict(color='tab:blue', 
+#                    linestyle='none', 
+#                    marker='o',
+#                    #markersize=15, 
+#                    #markerfacecoloralt='tab:red'
+#                    )
+
 for n in range(len(afpt_ind_list)):
-    ax.plot(afpt_ind_list[n][:,0],afpt_ind_list[n][:,1],label=afpt_ind_name_list[n]) #,"ro"
+    sc = ax.scatter(afpt_ind_list[n][:,0],
+               afpt_ind_list[n][:,1], 
+               c=afpt_ind_list[n][:,3],
+               alpha=afpt_ind_list[n][:,2]/afpt_ind_list[n][:,2].max(),
+               #cmap=''
+               label=afpt_ind_name_list[n],
+               edgecolors='none',
+               #**marker_style
+               )
+    cbar = fig.colorbar(sc)
+    cbar.set_label('Parent Transition Index')
 
 # export all as one:
 if save_files_bool:

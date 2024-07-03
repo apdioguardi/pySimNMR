@@ -209,7 +209,12 @@ class SimNMR(object):
                      min_freq=0.1,
                      max_freq=500):
         """
-            Trying to figure out how to index the states that I find...
+        example output for 75As, zero field, v_c = 7 MHz, eta = 0
+           field, freq, prob, eval_1, eval_2, p_state_1, p_state_2, mix_coefs_1,  mix_coefs_2
+        [[ 0.     7.    3.    3.5    -3.5     1.5        0.5        1. 0. 0. 0.   0. 1. 0. 0. ]
+         [ 0.     7.    3.   -3.5     3.5    -0.5       -1.5        0. 0. 1. 0.   0. 0. 0. 1. ]]
+         
+         
         """
         I0 = self.I0
         dim = self.dim
@@ -261,8 +266,6 @@ class SimNMR(object):
         ## calculate eigenvales and eigenvectors, sorted with respect to each other
         ## U is a matrix of eigenvectors columnwise
         evals, U = np.linalg.eig(Htot)
-        print('U')
-        print(U)
         ## U and Ui are the matricies of the eigenvectors which will be used to diagonalize the Hamiltonian
         Ui = np.transpose(np.conj(U),(0,2,1))
         #HtotD = Ui@Htot@U # checked nicks claim that this should produce evals in the 
@@ -280,10 +283,15 @@ class SimNMR(object):
         state_mixing_coefs = np.abs(Ui*Uiconj) 
         # the following reshapes the state_mixing_coefs so that they are flattened by one dimension
         #state_mixing_coefs = state_mixing_coefs.reshape(state_mixing_coefs.shape[0]*state_mixing_coefs.shape[1],state_mixing_coefs.shape[2])
-        ## use U and Ui on Iplus to get the matrix elements for all possible transitions
-        H1p = Ui@Iplus@U
-        # I have proven that the following transition probability intensities correspond correctly to |<n_i|I+|n_j>|^2 for all i and j
-        trans_probs_array = np.abs(H1p)**2
+        ## use U and Ui on Ix to get the matrix elements for all possible transitions
+        H1x = Ui@Ix@U
+        trans_probs_array = np.abs(H1x)**2
+        # There seems to have been an issue where, where, when eta is nonzero, the following transition probability 
+        # intensities were not all captured by |<n_i|I+|n_j>|^2 for all i and j for eta != 0, instead the Ix = (Iplus + Iminus) / 2 operator 
+        # should be used to calculate the transition intensities. This may be related to the mixing of eigenstates for eta != 0, and therefore
+        # the spin lowering operator must be used to capture some of the allowed superposed-state transitions. This also seems to only matter for
+        # I0 > 3/2. Tested on 115In(2) site in CeRhIn5
+
         allowed_trans_idxs = np.argwhere(trans_probs_array > mtx_elem_min)
         ## extract the real part of the eigenvalues (the imaginary parts are already zero since we have a hermitian hamiltonian)
         real_evals = evals.real
@@ -294,7 +302,7 @@ class SimNMR(object):
         allowed_eval_mPlus1 = evals[allowed_eval_mPlus1_idxs[:, 0], allowed_eval_mPlus1_idxs[:, 1]]
         field = H0_array[allowed_eval_m_idxs[:, 0]]
         # there will likely exist duplicate frequencies and will need to sum the probabilities
-        freq = np.abs(allowed_eval_mPlus1-allowed_eval_m)
+        freq = np.abs(allowed_eval_mPlus1 - allowed_eval_m)
         prob = trans_probs_array[trans_probs_array > mtx_elem_min]
         # evals1 and 2
         eval_1 = real_evals[allowed_eval_m_idxs[:, 0], allowed_eval_m_idxs[:, 1]]
@@ -315,15 +323,15 @@ class SimNMR(object):
         #field_broadcast=H0_array_reshape+zeros
         #elevels_fields_out = np.column_stack((field_broadcast.flatten(),real_evals.flatten()))
         # the mix_coefs_1 and mix_coefs_2 will each have n_colmns = dim
-        output= np.column_stack((field,
-                                 freq,
-                                 prob,
-                                 eval_1,
-                                 eval_2,
-                                 p_state_1,
-                                 p_state_2,
-                                 mix_coefs_1,
-                                 mix_coefs_2))
+        output = np.column_stack((field,
+                                  freq,
+                                  prob,
+                                  eval_1,
+                                  eval_2,
+                                  p_state_1,
+                                  p_state_2,
+                                  mix_coefs_1,
+                                  mix_coefs_2))
         # delete zero-frequency transitions
         zero_freq_idx = np.argwhere(output[:,1] < 1e-6)
         output = np.delete(output, zero_freq_idx, axis=0)
@@ -552,11 +560,16 @@ class SimNMR(object):
         evals, U = np.linalg.eig(Htot)
         ## build U and Ui which are the matricies of the eigenvectors which will be used to diagonalize the Hamiltonian
         Ui = np.transpose(np.conj(U),(0,2,1))
-        ## use U and Ui on Iplus to get the matrix elements for magnetically induced transitions
-        Iplus
-        H1p = Ui@Iplus@U
-        # square to get the transition probabilities
-        trans_probs_array = np.abs(H1p)**2
+        
+        ## use U and Ui on Ix to get the matrix elements for all possible transitions
+        H1x = Ui@Ix@U
+        trans_probs_array = np.abs(H1x)**2
+        # There seems to have been an issue where, where, when eta is nonzero, the following transition probability 
+        # intensities were not all captured by |<n_i|I+|n_j>|^2 for all i and j for eta != 0, instead the Ix = (Iplus + Iminus) / 2 operator 
+        # should be used to calculate the transition intensities. This may be related to the mixing of eigenstates for eta != 0, and therefore
+        # the spin lowering operator must be used to capture some of the allowed superposed-state transitions. This also seems to only matter for
+        # I0 > 3/2. Tested on 115In(2) site in CeRhIn5
+        
         # allow the user to throw away very low probability transitions
         allowed_trans_idxs = np.argwhere(trans_probs_array > mtx_elem_min)
         allowed_eval_m_idxs = allowed_trans_idxs[:,[0,1]]
@@ -574,7 +587,8 @@ class SimNMR(object):
         #ahoy! print('m_val_mtcs = Ui@Iz@U is incorrect!, trans is not correct... actually a superposition of states!') need to deal with this eventually, but for now, will let it stand so we can keep simulating and fitting... see examples of plot_elevels_vs_field to get an idea of this. the eigenstate character also changes with angle and other parameters during the crossover from quadrupole dominated to zeeman (internal zeeman) dominated
         trans = (m_val_mtcs - 0.5).real
         trans = np.diagonal(trans, axis1=1, axis2=2)
-        trans = np.abs(np.around(trans[np.where(trans>-I0)]))
+        #trans = np.abs(np.around(trans[np.where(trans>-I0)]))
+        trans = np.around(trans[np.where(trans>-I0)])
         trans_array = trans.astype(int)
         return (freq_array, prob_array, trans_array)
 
@@ -696,6 +710,10 @@ class SimNMR(object):
                                                 mtx_elem_min=mtx_elem_min,
                                                 min_freq=min_freq,
                                                 max_freq=max_freq)
+        
+        print('freq_spec_ed; freq_array =', freq_array)    
+        print('freq_spec_ed; prob_array =', prob_array)    
+        print('freq_spec_ed; trans_array =', trans_array)
         # need to loop through the transitions and set their appropriate linwidths,
         # then can calculate the individual spectra using the gaussian or lorentzian
         # functions with properly scaled FWHM (so magnetic for all plus FWHM_dvQ_MHz*float(trans))
@@ -820,15 +838,19 @@ class SimNMR(object):
         ## build U and Ui which are the matricies of the eigenvectors which will be used to diagonalize the Hamiltonian
         Ui = np.transpose(np.conj(U),(0,2,1))
 
-        ## use U and Ui on Iplus to get the matrix elements
-        H1p = Ui@Iplus@U
-
-        trans_probs_array = np.abs(H1p)**2
-        # print(np.around(trans_probs_array))
-        # should be able to index the waves by this
+        ## use U and Ui on Ix to get the matrix elements for all possible transitions
+        H1x = Ui@Ix@U
+        trans_probs_array = np.abs(H1x)**2
+        # There seems to have been an issue where, where, when eta is nonzero, the following transition probability 
+        # intensities were not all captured by |<n_i|I+|n_j>|^2 for all i and j for eta != 0, instead the Ix = (Iplus + Iminus) / 2 operator 
+        # should be used to calculate the transition intensities. This may be related to the mixing of eigenstates for eta != 0, and therefore
+        # the spin lowering operator must be used to capture some of the allowed superposed-state transitions. This also seems to only matter for
+        # I0 > 3/2. Tested on 115In(2) site in CeRhIn5
+        
         allowed_trans_idxs = np.argwhere(trans_probs_array > mtx_elem_min)
         # print('allowed_trans_idxs:')
         # print(allowed_trans_idxs)
+        
         #need to index the H0 wave to figure out which field value actually has a transition within the tolerance
         # maybe can use the argwhere above here (or rather the first dimension thereof)
 
@@ -857,25 +879,12 @@ class SimNMR(object):
         # use U and Ui to get the corresponding transition numbers (absolute value 0=cent, 1=1st sat, 2=2nd sat, to indicate simply which satellite it is) for convolution of delta_vq
         # the following is incorrect!
         m_val_mtcs = Ui@Iz@U
-        # print('m_val_mtcs:')
-        # print(m_val_mtcs)
-        #trans = m_val_mtcs.real
-        trans=np.abs(m_val_mtcs) #currently testing the difference between the 
-        # print('trans before diag:')
-        # print(np.around(trans,decimals=2))
-        trans = np.diagonal(trans,axis1=1,axis2=2)
-        # print('trans after diag:')
-        # print(trans)
-        trans_array = np.around(trans[np.where(trans>-I0)],decimals=3)
-        #ahoy! changed to float since that is what i want for this peice of code... trans_array = trans.astype(int)
-        # print('trans_array.shape='+str(trans_array.shape))
-        # print(trans_array)
-        # print('freq_array.shape='+str(freq_array.shape))
-        #print(freq_array)
-        # print('prob_array.shape='+str(prob_array.shape))
-        #print(prob_array)
-        # print('trans_array.shape='+str(trans_array.shape))
-        #print(trans_array)
+        
+        trans = (m_val_mtcs - 0.5).real
+        trans = np.diagonal(trans, axis1=1, axis2=2)
+        #trans = np.abs(np.around(trans[np.where(trans>-I0)]))
+        trans = np.around(trans[np.where(trans>-I0)])
+        trans_array = trans.astype(int)
 
         # in the following block of code, there is the possibility that the following
         # error might arise for values of mtx_elem_min that are small (smaller than ~0.5 so far):
@@ -899,7 +908,8 @@ class SimNMR(object):
         #print(input_array[:,[0,1]])
         #np.unique gets us the unique array (sorted first by field and then frequency) and with the option inverse
         # gives us the indicies of the location of the duplicates along axis zero.
-        unique_H0_f, idxs = np.unique(input_array[:,[0,1]],return_inverse=True,axis=0)
+        unique_H0_f, idxs = np.unique(input_array[:,[0,1]], return_inverse=True, axis=0)
+
         # print(unique_H0_f)
         # print(idxs)
         #prob_array_out=prob_array
@@ -909,16 +919,16 @@ class SimNMR(object):
         # that is required
         prob_array_out = np.array([])
         for i in range(len(unique_H0_f)):
-            duplicate_idxs = np.where(idxs==i)
-        #     print(duplicate_idxs)
-            #prob_array_out=np.append(prob_array_out,np.amax(prob_array[duplicate_idxs]))
-            prob_array_out=np.append(prob_array_out,np.sum(prob_array[duplicate_idxs]))
-        #hfp_out = np.column_stack((unique_H0_f,prob_array_out))
+            duplicate_idxs = np.where(idxs.flatten()==i)
+            prob_array_out = np.append(prob_array_out, np.sum(prob_array[duplicate_idxs]))
 
-        f0 = min_freq + (max_freq-min_freq)/2
-        delta_f0 = max_freq-min_freq
+        f0 = min_freq + (max_freq - min_freq)/2
+        delta_f0 = max_freq - min_freq
         # frequency pruning:
-        f0_close_bool_array=np.isclose(f0,unique_H0_f[:,1],rtol=0.0, atol=delta_f0/2.0)
+        f0_close_bool_array=np.isclose(f0, 
+                                       unique_H0_f[:,1], 
+                                       rtol=0.0, 
+                                       atol=delta_f0/2.0)
         #print('f0_close_bool_array.shape='+str(f0_close_bool_array.shape))
         H0_array_out = unique_H0_f[f0_close_bool_array,[0]]
         freq_array_out = unique_H0_f[f0_close_bool_array,[1]]
@@ -927,7 +937,8 @@ class SimNMR(object):
         try:
             trans_array_out = trans_array[f0_close_bool_array]
         except:
-            print('ERROR in array sizes')
+            print('ERROR in array sizes',
+                  'proceeding with trans_array_out = np.zeros(shape=H0_array_out.shape)')
             # print('H0_array_out.shape=' + str(H0_array_out.shape))
             #print(H_array_out)
             # print('freq_array.shape=' + str(freq_array_out.shape))
@@ -1051,56 +1062,54 @@ class SimNMR(object):
         ## build U and Ui which are the matricies of the eigenvectors which will be used to diagonalize the Hamiltonian
         Ui = np.transpose(np.conj(U),(0,2,1))
 
-        ## use U and Ui on Iplus to get the matrix elements
-        H1p = Ui@Iplus@U
-
-        trans_probs_array = np.abs(H1p)**2
-
+        ## use U and Ui on Ix to get the matrix elements
+        H1x = Ui@Ix@U
+        trans_probs_array = np.abs(H1x)**2
         allowed_trans_idxs = np.argwhere(trans_probs_array > mtx_elem_min)
-        # print('allowed_trans_idxs:')
-        # print(allowed_trans_idxs)
+        #print('allowed_trans_idxs:')
+        #print(allowed_trans_idxs)
         #need to index the H0 wave to figure out which field value actually has a transition within the tolerance
         # maybe can use the argwhere above here (or rather the first dimension thereof)
 
         allowed_eval_m_idxs = allowed_trans_idxs[:,[0,1]]
-        # print('allowed_eval_m_idxs:')
-        # print(allowed_eval_m_idxs)
+        #print('allowed_eval_m_idxs:')
+        #print(allowed_eval_m_idxs)
         allowed_eval_mPlus1_idxs = allowed_trans_idxs[:,[0,2]]
-        # print('allowed_eval_mPlus1_idxs:')
-        # print(allowed_eval_mPlus1_idxs)
+        #print('allowed_eval_mPlus1_idxs:')
+        #print(allowed_eval_mPlus1_idxs)
         allowed_eval_m = evals[allowed_eval_m_idxs[:,0],allowed_eval_m_idxs[:,1]]
-        # print('allowed_eval_m:')
-        # print(allowed_eval_m)
-        allowed_eval_mPlus1 = evals[allowed_eval_mPlus1_idxs[:,0],allowed_eval_mPlus1_idxs[:,1]]
-        # print('allowed_eval_mPlus1:')
-        # print(allowed_eval_mPlus1)
+        #print('allowed_eval_m:')
+        #print(allowed_eval_m)
+        allowed_eval_mPlus1 = evals[allowed_eval_mPlus1_idxs[:,0], allowed_eval_mPlus1_idxs[:,1]]
+        #print('allowed_eval_mPlus1:')
+        #print(allowed_eval_mPlus1)
 
-        # print('allowed_eval_m_idxs[:,0]')
-        # print(allowed_eval_m_idxs[:,0])
-        H0_array_out = H0_array[allowed_eval_m_idxs[:,0]]
-        # print('H0_array_out')
-        # print(H0_array_out)
-        freq_array = np.abs(allowed_eval_mPlus1-allowed_eval_m)
+        #print('allowed_eval_m_idxs[:,0]')
+        #print(allowed_eval_m_idxs[:,0])
+        H0_array = H0_array[allowed_eval_m_idxs[:,0]]
+        freq_array = allowed_eval_mPlus1 - allowed_eval_m
         prob_array = trans_probs_array[trans_probs_array > mtx_elem_min]
+        #remove zero frequency transitions
+        H0_array_out = H0_array[freq_array > 0]
+        prob_array = prob_array[freq_array > 0]
+        freq_array = np.abs(freq_array[freq_array > 0])
 
         # use U and Ui to get the corresponding transition numbers (absolute value 0=cent, 1=1st sat, 2=2nd sat, to indicate simply which satellite it is) for convolution of delta_vq
         m_val_mtcs = Ui@Iz@U
-        trans = (m_val_mtcs-0.5).real
-        # print('trans before diag:')
-        # print(trans)
-        trans = np.diagonal(trans,axis1=1,axis2=2)
-        # print('trans after diag:')
-        # print(trans)
+        trans = (m_val_mtcs - 0.5).real
+        #print('trans before diag:')
+        #print(trans)
+        trans = np.diagonal(trans, axis1=1, axis2=2)
+        #print('trans after diag:')
+        #print(trans)
         trans = np.abs(np.around(trans[np.where(trans>-I0)]))
         trans_array = trans.astype(int)
-        # print('trans:')
-        # print(trans)
-        # print('freq_array:')
-        # print(freq_array)
-        # print('prob_array')
-        # print(prob_array)
-        # print('trans_array:')
-        # print(trans_array)
+        print('trans.shape, trans:')
+        print(trans.shape, trans)
+        print('freq_array.shape, freq_array:')
+        print(freq_array.shape, freq_array)
+        print('prob_array.shape, prob_array')
+        print(prob_array.shape, prob_array)
 
         # in the following block of code, there is the possibility that the following
         # error might arise for values of mtx_elem_min that are small (smaller than ~0.5 so far):
@@ -1112,19 +1121,31 @@ class SimNMR(object):
         #   File "/Users/apd/gd/code/python/IFW/pySimNMR/v0.6/pySimNMR.py", line 657, in freq_prob_trans_ed_HS
         #     trans_array = trans_array[f0_close_bool_array]
         # IndexError: boolean index did not match indexed array along dimension 0; dimension is 3000 but corresponding boolean dimension is 3387
-        ##It seems that one possible solution here would be to catch this error and increase 
-        ##mtx_elem_min automatically until the error goes away... may try to implement this.
+        # It seems that one possible solution here would be to catch this error and increase 
+        # mtx_elem_min automatically until the error goes away... may try to implement this.
         # the following line searches for values within the freq_array that are within delta_f0/2 of 
         # the observed frequency f0 and returns an array of the same shape as freq_array with boolean values
         # to be used in the following 4 lines to select the elements that we are after (that is, we need a small
         # range of resonant frequencies to keep)
-        f0_close_bool_array=np.isclose(f0,freq_array,rtol=0.0, atol=delta_f0/2.0)
+        f0_close_bool_array = np.isclose(f0, freq_array, rtol=0.0, atol=delta_f0/2.0)
+        print('f0_close_bool_array.shape')
+        print(f0_close_bool_array.shape)
+        print('prob_array.shape')
+        print(prob_array.shape)
         prob_array = prob_array[f0_close_bool_array]
-        trans_array = trans_array[f0_close_bool_array]
+        print('prob_array.shape after')
+        print(prob_array.shape)
+        print('trans_array.shape')
+        print(trans_array.shape)
+        trans_array = trans_array[f0_close_bool_array]  
+        print('trans_array.shape after')
+        print(trans_array.shape)
+
         H0_array_out = H0_array_out[f0_close_bool_array]
+
         freq_array = freq_array[f0_close_bool_array]
 
-        return (H0_array_out,freq_array,prob_array,trans_array)
+        return (H0_array_out, freq_array, prob_array, trans_array)
 
 
     def freq_spec_edpp(self,
@@ -1386,8 +1407,8 @@ class SimNMR(object):
         return C_var
 
 
-    def prob(self,m,I0):
-        pulse_NMR_probability = abs(I0*(I0 + 1) - m*(m - 1))**0.5
+    def prob(self, m, I0):
+        pulse_NMR_probability = abs(I0*(I0 + 1) - m*(m - 1))
         return pulse_NMR_probability
 
 
@@ -1432,7 +1453,6 @@ class SimNMR(object):
     #     Kax = 1./6*(2*Kc - Ka - Kb)
     #     freq = gamma*H0*(1 + Kiso + Kax*(3*np.cos(theta_ar)**2 - 1)
     #                      + Kani*np.sin(theta_ar)**2*np.cos(2*phi_ar))
-
         return freq
 
 
@@ -1460,7 +1480,7 @@ class SimNMR(object):
         vQ = principle component of the EFG tensor (not the actual NQR freq, should probably be called vc)
              the function was calculated by Baugher et al. assuming the shift and EFG tensors principle axes
              are coincident
-        eta = assymetry parameter of the EFG tensor
+        eta = asymmetry parameter of the EFG tensor
 
         the following parameters are expected to be 1D arrays all with the same length (could be length 1):
         m_ar = array of m (nuclear spin state index) values from -I0+1 to I0. generated by the powder 
@@ -1472,18 +1492,181 @@ class SimNMR(object):
         phi_ar = array of azimuthal angles phi in radians from 0 -- 2pi, eg
                  (rand_phi_array = np.random.uniform(0,np.pi*2,size=nrands))
         """
+        print('inside sec_ord_freq')
+        print('input parameters:')
+        print('I0 =', I0)
+        print('gamma =', gamma)
+        print('H0 =', H0)
+        print('Ka =', Ka)
+        print('Kb =', Kb)
+        print('Kc =', Kc)
+        print('vQ =', vQ)
+        print('eta =', eta)
+        print('m_ar =', m_ar)
+        print('theta_ar =', theta_ar)
+        print('phi_ar =', phi_ar)
         Kiso = 1./3*(Ka/100 + Kb/100 + Kc/100)
+        print('Kiso =', Kiso)
         Kani = 1./2*(Kb/100 - Ka/100)
+        print('Kani =', Kani)
         Kax = 1./6*(2*Kc/100 - Ka/100 - Kb/100)
-        cent_ar = np.where(m_ar==0.5,1,0)
-        freq = gamma*H0*((1 + Kiso + Kax*(3*np.cos(theta_ar)**2 - 1)
-                          + Kani*np.sin(theta_ar)**2*np.cos(2*phi_ar))
-                         - cent_ar*self.R(vQ, I0)/(6*gamma*H0)*(self.A(eta, phi_ar)*np.cos(theta_ar)**4 
-                                                                + self.B(eta, phi_ar)*np.cos(theta_ar)**2 
-                                                                + self.C(eta, phi_ar))
-                         - (2*m_ar - 1.0)*vQ/4*((3*np.cos(theta_ar)**2 - 1) 
-                                                - eta*np.sin(theta_ar)**2*np.cos(2*phi_ar)))
-        return freq
+        print('Kax =', Kax)
+        cent_ar = np.where(m_ar==0.5, 1, 0)
+        print('cent_ar =', cent_ar)
+        print('self.A(eta, phi_ar) =', self.A(eta, phi_ar))
+        print('self.B(eta, phi_ar) =', self.B(eta, phi_ar))
+        print('self.C(eta, phi_ar) =', self.C(eta, phi_ar))
+        freq_ar = (gamma*H0*((1 + Kiso + Kax*(3*np.cos(theta_ar)**2 - 1)
+                              + Kani*np.sin(theta_ar)**2*np.cos(2*phi_ar)))
+                            - (cent_ar*self.R(vQ, I0)/(6*gamma*H0)*(self.A(eta, phi_ar)*np.cos(theta_ar)**4 
+                                                                 + self.B(eta, phi_ar)*np.cos(theta_ar)**2 
+                                                                 + self.C(eta, phi_ar)))
+                   - ((2*m_ar - 1.0)*vQ/4*(((3*np.cos(theta_ar)**2 - 1))
+                    - eta*np.sin(theta_ar)**2*np.cos(2*phi_ar)))
+                  )
+
+        return freq_ar
+
+
+    def convolveGaussLor(self,
+                         x_array,
+                         y_array,
+                         FWHM,
+                         mode='gauss'):
+        """
+        Performs a convolution of the input y_array with a normalized gaussian or lorentzian function. The x_array 
+        is expected to be the frequency in MHz/field in Tesla (independent variable) data, and the y_array is 
+        expected to be the NMR response (dependent variable) data. The FWHM is converted properly below and is expected
+        to be in the corresponding dependent variable units (MHz or T). The mode keyword argument can be either 'gauss' or
+        'lor' strings, and if anything else is passed here the function just returns the input y_array data.
+        """
+        if mode=='gauss':
+            mu = np.mean(x_array)
+            sigma = FWHM/(2*(2*np.log(2))**0.5)
+            gaussian_array = 1/(sigma*(2*np.pi)**0.5)*np.exp(-0.5*((x_array - mu)/sigma)**2)
+            sum_norm = np.sum(gaussian_array)
+            if sum_norm == 0.0:
+                print('there was a problem normalizing the covolution, increasing nbins may help')
+                return y_array
+            else:
+                gaussian_array = gaussian_array/sum_norm
+                gauss_convolved_spectrum = np.convolve(y_array, gaussian_array, mode='same')
+                return gauss_convolved_spectrum
+        elif mode == 'lor':
+            x0 = np.mean(x_array)
+            Gamma = FWHM
+            lorentzian_array = (1/np.pi)*((0.5*Gamma)/((x_array - x0)**2 + (0.5*Gamma)**2))
+            sum_norm = np.sum(lorentzian_array)
+            if sum_norm==0.0:
+                print('there was a problem normalizing the convolution, increasing nbins may help')
+                return y_array
+            else:
+                lorentzian_array = lorentzian_array/sum_norm
+                lor_convolved_spectrum = np.convolve(y_array, lorentzian_array, mode='same')
+                return lor_convolved_spectrum
+        else:
+            print("invalid mode; please select mode='gauss' or 'lor'")
+            return y_array
+        
+
+    def sec_ord_freq_spec(self,
+                          I0,
+                          gamma,
+                          H0,
+                          Ka,
+                          Kb,
+                          Kc,
+                          vQ,
+                          eta,
+                          theta_array,
+                          phi_array,
+                          nbins=1000,
+                          min_freq=None,
+                          max_freq=None,
+                          broadening_func='gauss',
+                          FWHM_MHz=0.01,
+                          save_files_bool=False,
+                          out_filename='',
+                          baseline=0.25):
+        print('inside sec_ord_freq_spec')
+        gamma = abs(gamma)
+        if I0==0.5: #ahoy! this should be boolean...
+            #print("Running I=1/2 calc...")
+            freq_array=self.I0_one_half_freq(
+                                             gamma=gamma,
+                                             H0=H0,
+                                             Ka=Ka,
+                                             Kb=Kb,
+                                             Kc=Kc,
+                                             theta_ar=theta_array,
+                                             phi_ar=phi_array
+                                            )
+
+            if min_freq==None or max_freq==None:
+                min_range = freq_array.min() - baseline
+                max_range = freq_array.max() + baseline
+            else:
+                min_range = min_freq
+                max_range = max_freq
+            hist, bin_edges = np.histogram(freq_array,
+                                           bins=int(nbins),
+                                           range=(min_range, max_range)
+                                          )
+        else:
+            #print("Running second order calc...")
+            dim = int((I0 + 1/2)*2) #ahoy! check this int algebra to make sure it works properly...
+            print('dim =', dim)
+            m_values = np.array([I0-i for i in range(dim-1)])
+            print('m_values =', m_values)
+
+            freq_array = self.sec_ord_freq(                
+                                           I0=I0,
+                                           gamma=gamma,
+                                           H0=H0,
+                                           Ka=Ka,
+                                           Kb=Kb,
+                                           Kc=Kc,
+                                           vQ=vQ,
+                                           eta=eta,
+                                           m_ar=m_values,
+                                           theta_ar=theta_array,
+                                           phi_ar=phi_array
+                                          )
+            print('freq_array', freq_array)
+            prob_array = self.prob(m_values, I0)
+            print('prob_array', prob_array)
+            if min_freq==None or max_freq==None:
+                min_range = freq_array.min() - baseline
+                max_range = freq_array.max() + baseline
+            else:
+                min_range = min_freq
+                max_range = max_freq
+
+            hist, bin_edges = np.histogram(freq_array,
+                                           bins=int(nbins),
+                                           range=(min_range, max_range),
+                                           weights=prob_array
+                                          )
+        bin_edges = bin_edges[:-1]
+        histogram = np.column_stack((bin_edges,hist))
+        convolved_hist_intensity = self.convolveGaussLor(x_array=bin_edges,
+                                                    y_array=hist,
+                                                    FWHM=FWHM_MHz,
+                                                    mode=broadening_func)
+        #ahoy! need to implement quadrupolar broadening of the satellites
+        convolved_histogram = np.column_stack((bin_edges,convolved_hist_intensity))
+        if save_files_bool==True:
+            if out_filename!='':
+                out_filename_spec = out_filename + '_sim_ppp.txt'
+                out_filename_hist = out_filename + '_sim_ppp_hist.txt'
+                out_filename_hist_conv = out_filename + '_sim_ppp_hist_conv.txt'
+            else:
+                out_filename_spec = 'sim_ppp.txt'
+                out_filename_hist = 'sim_ppp_hist.txt'
+                out_filename_hist_conv = 'sim_ppp_hist_conv.txt'
+            np.savetxt(out_filename_hist_conv, convolved_histogram)
+
+        return convolved_histogram
 
 
     def I0_one_half_field(self,
@@ -1563,46 +1746,95 @@ class SimNMR(object):
         return Hres
 
 
-    def convolveGaussLor(self,
-                         x_array,
-                         y_array,
-                         FWHM,
-                         mode='gauss'):
-        """
-        Performs a convolution of the input y_array with a normalized gaussian or lorentzian function. The x_array 
-        is expected to be the frequency in MHz/field in Tesla (independent variable) data, and the y_array is 
-        expected to be the NMR response (dependent variable) data. The FWHM is converted properly below and is expected
-        to be in the corresponding dependent variable units (MHz or T). The mode keyword argument can be either 'gauss' or
-        'lor' strings, and if anything else is passed here the function just returns the input y_array data.
-        """
-        if mode=='gauss':
-            mu = np.mean(x_array)
-            sigma = FWHM/(2*(2*np.log(2))**0.5)
-            gaussian_array = 1/(sigma*(2*np.pi)**0.5)*np.exp(-0.5*((x_array - mu)/sigma)**2)
-            sum_norm = np.sum(gaussian_array)
-            if sum_norm == 0.0:
-                print('there was a problem normalizing the covolution, increasing nbins may help')
-                return y_array
+    def sec_ord_field_spec(self,
+                           I0,
+                           gamma,
+                           f0,
+                           Ka,
+                           Kb,
+                           Kc,
+                           vQ,
+                           eta,
+                           theta_array,
+                           phi_array,
+                           nbins=1000,
+                           min_field=None,
+                           max_field=None,
+                           broadening_func='gauss',
+                           FWHM_T=0.01,
+                           save_files_bool=False,
+                           out_filename='',
+                           baseline=0.25):
+        if I0==0.5: #ahoy! this should be boolean...
+            #print("Running I=1/2 calc...")
+            field_array=self.I0_one_half_field(gamma=gamma,
+                                    f0=f0,
+                                    Ka=Ka,
+                                    Kb=Kb,
+                                    Kc=Kc,
+                                    theta_ar=rtheta_array,
+                                    phi_ar=phi_array
+                                    )
+            if min_field==None or max_field==None:
+                min_range=field_array.min()-baseline
+                max_range=field_array.max()+baseline
             else:
-                gaussian_array = gaussian_array/sum_norm
-                gauss_convolved_spectrum = np.convolve(y_array, gaussian_array, mode='same')
-                return gauss_convolved_spectrum
-        elif mode == 'lor':
-            x0 = np.mean(x_array)
-            Gamma = FWHM
-            lorentzian_array = (1/np.pi)*((0.5*Gamma)/((x_array - x0)**2 + (0.5*Gamma)**2))
-            sum_norm = np.sum(lorentzian_array)
-            if sum_norm==0.0:
-                print('there was a problem normalizing the convolution, increasing nbins may help')
-                return y_array
-            else:
-                lorentzian_array = lorentzian_array/sum_norm
-                lor_convolved_spectrum = np.convolve(y_array, lorentzian_array, mode='same')
-                return lor_convolved_spectrum
+                min_range=min_field
+                max_range=max_field
+            hist, bin_edges = np.histogram(field_array,
+                                           bins=int(nbins),
+                                           range=(min_range, max_range)
+                                          )
         else:
-            print("invalid mode; please select mode='gauss' or 'lor'")
-            return y_array
-        
+            #print("Running second order calc...")
+            dim = int((I0 + 1/2)*2) #ahoy! check this int algebra to make sure it works properly...
+            m_values = np.array([I0-i for i in range(dim-1)])
+
+            field_array = self.sec_ord_field(I0=I0,
+                                            gamma=gamma,
+                                            f0=f0,
+                                            Ka=Ka,
+                                            Kb=Kb,
+                                            Kc=Kc,
+                                            vQ=vQ,
+                                            eta=eta,
+                                            m_ar=m_values,
+                                            theta_ar=theta_array,
+                                            phi_ar=phi_array)
+            prob_array = self.prob(m_values,I0)
+
+            if min_field==None or max_field==None:
+                min_range=field_array.min()-baseline
+                max_range=field_array.max()+baseline
+            else:
+                min_range=min_field
+                max_range=max_field
+
+            hist, bin_edges = np.histogram(field_array,
+                                           bins=int(nbins),
+                                           range=(min_range, max_range),
+                                           weights=prob_array)
+        bin_edges=bin_edges[:-1]
+        histogram = np.column_stack((bin_edges, hist))
+        convolved_hist_intensity = self.convolveGaussLor(x_array=bin_edges,
+                                                         y_array=hist,
+                                                         FWHM=FWHM_T,
+                                                         mode=broadening_func)
+        #ahoy! need to implement quadrupolar broadening of the satellites
+        convolved_histogram = np.column_stack((bin_edges,convolved_hist_intensity))
+        if save_files_bool==True:
+            if out_filename!='':
+                out_filename_spec = out_filename + '_sim_ppp.txt'
+                out_filename_hist = out_filename + '_sim_ppp_hist.txt'
+                out_filename_hist_conv = out_filename + '_sim_ppp_hist_conv.txt'
+            else:
+                out_filename_spec = 'sim_ppp.txt'
+                out_filename_hist = 'sim_ppp_hist.txt'
+                out_filename_hist_conv = 'sim_ppp_hist_conv.txt'
+            np.savetxt(out_filename_hist_conv, convolved_histogram)
+
+        return convolved_histogram
+
 
     def sec_ord_freq_pp(self,
                         H0,
@@ -1863,190 +2095,5 @@ class SimNMR(object):
     #     plt.plot(histogram[:,0],histogram[:,1])
     #     plt.plot(convolved_histogram[:,0],convolved_histogram[:,1])
     #     plt.show()
-
-        return convolved_histogram
-
-    def sec_ord_freq_spec(self,
-                          I0,
-                          gamma,
-                          H0,
-                          Ka,
-                          Kb,
-                          Kc,
-                          vQ,
-                          eta,
-                          theta_array,
-                          phi_array,
-                          nbins=1000,
-                          min_freq=None,
-                          max_freq=None,
-                          broadening_func='gauss',
-                          FWHM_MHz=0.01,
-                          save_files_bool=False,
-                          out_filename='',
-                          baseline=0.25):
-        gamma = abs(gamma)
-        if I0==0.5: #ahoy! this should be boolean...
-            #print("Running I=1/2 calc...")
-            freq_array=self.I0_one_half_freq(gamma=gamma,
-                                             H0=H0,
-                                             Ka=Ka,
-                                             Kb=Kb,
-                                             Kc=Kc,
-                                             theta_ar=theta_array,
-                                             phi_ar=phi_array
-                                            )
-
-            if min_freq==None or max_freq==None:
-                min_range=freq_array.min()-baseline
-                max_range=freq_array.max()+baseline
-            else:
-                min_range=min_freq
-                max_range=max_freq
-            hist, bin_edges = np.histogram(freq_array,
-                                           bins=int(nbins),
-                                           range=(min_range, max_range)
-                                          )
-        else:
-            #print("Running second order calc...")
-            dim = int((I0 + 1/2)*2) #ahoy! check this int algebra to make sure it works properly...
-            m_values = np.array([I0-i for i in range(dim-1)])
-
-            freq_array = self.sec_ord_freq(                
-                                           I0=I0,
-                                           gamma=gamma,
-                                           H0=H0,
-                                           Ka=Ka,
-                                           Kb=Kb,
-                                           Kc=Kc,
-                                           vQ=vQ,
-                                           eta=eta,
-                                           m_ar=m_values,
-                                           theta_ar=theta_array,
-                                           phi_ar=phi_array
-                                          )
-
-            prob_array = self.prob(m_values,I0)
-
-            if min_freq==None or max_freq==None:
-                min_range=freq_array.min()-baseline
-                max_range=freq_array.max()+baseline
-            else:
-                min_range=min_freq
-                max_range=max_freq
-
-            hist, bin_edges = np.histogram(freq_array,
-                                           bins=int(nbins),
-                                           range=(min_range, max_range),
-                                           weights=prob_array
-                                          )
-        bin_edges=bin_edges[:-1]
-        histogram = np.column_stack((bin_edges,hist))
-        convolved_hist_intensity = self.convolveGaussLor(x_array=bin_edges,
-                                                    y_array=hist,
-                                                    FWHM=FWHM_MHz,
-                                                    mode=broadening_func)
-        #ahoy! need to implement quadrupolar broadening of the satellites
-        convolved_histogram = np.column_stack((bin_edges,convolved_hist_intensity))
-        if save_files_bool==True:
-            if out_filename!='':
-                out_filename_spec = out_filename + '_sim_ppp.txt'
-                out_filename_hist = out_filename + '_sim_ppp_hist.txt'
-                out_filename_hist_conv = out_filename + '_sim_ppp_hist_conv.txt'
-            else:
-                out_filename_spec = 'sim_ppp.txt'
-                out_filename_hist = 'sim_ppp_hist.txt'
-                out_filename_hist_conv = 'sim_ppp_hist_conv.txt'
-            np.savetxt(out_filename_hist_conv, convolved_histogram)
-
-        return convolved_histogram
-
-
-    def sec_ord_field_spec(self,
-                           I0,
-                           gamma,
-                           f0,
-                           Ka,
-                           Kb,
-                           Kc,
-                           vQ,
-                           eta,
-                           theta_array,
-                           phi_array,
-                           nbins=1000,
-                           min_field=None,
-                           max_field=None,
-                           broadening_func='gauss',
-                           FWHM_T=0.01,
-                           save_files_bool=False,
-                           out_filename='',
-                           baseline=0.25):
-        if I0==0.5: #ahoy! this should be boolean...
-            #print("Running I=1/2 calc...")
-            field_array=self.I0_one_half_field(gamma=gamma,
-                                    f0=f0,
-                                    Ka=Ka,
-                                    Kb=Kb,
-                                    Kc=Kc,
-                                    theta_ar=rtheta_array,
-                                    phi_ar=phi_array
-                                    )
-            if min_field==None or max_field==None:
-                min_range=field_array.min()-baseline
-                max_range=field_array.max()+baseline
-            else:
-                min_range=min_field
-                max_range=max_field
-            hist, bin_edges = np.histogram(field_array,
-                                           bins=int(nbins),
-                                           range=(min_range, max_range)
-                                          )
-        else:
-            #print("Running second order calc...")
-            dim = int((I0 + 1/2)*2) #ahoy! check this int algebra to make sure it works properly...
-            m_values = np.array([I0-i for i in range(dim-1)])
-
-            field_array = self.sec_ord_field(I0=I0,
-                                            gamma=gamma,
-                                            f0=f0,
-                                            Ka=Ka,
-                                            Kb=Kb,
-                                            Kc=Kc,
-                                            vQ=vQ,
-                                            eta=eta,
-                                            m_ar=m_values,
-                                            theta_ar=theta_array,
-                                            phi_ar=phi_array)
-            prob_array = self.prob(m_values,I0)
-
-            if min_field==None or max_field==None:
-                min_range=field_array.min()-baseline
-                max_range=field_array.max()+baseline
-            else:
-                min_range=min_field
-                max_range=max_field
-
-            hist, bin_edges = np.histogram(field_array,
-                                           bins=int(nbins),
-                                           range=(min_range, max_range),
-                                           weights=prob_array)
-        bin_edges=bin_edges[:-1]
-        histogram = np.column_stack((bin_edges, hist))
-        convolved_hist_intensity = self.convolveGaussLor(x_array=bin_edges,
-                                                         y_array=hist,
-                                                         FWHM=FWHM_T,
-                                                         mode=broadening_func)
-        #ahoy! need to implement quadrupolar broadening of the satellites
-        convolved_histogram = np.column_stack((bin_edges,convolved_hist_intensity))
-        if save_files_bool==True:
-            if out_filename!='':
-                out_filename_spec = out_filename + '_sim_ppp.txt'
-                out_filename_hist = out_filename + '_sim_ppp_hist.txt'
-                out_filename_hist_conv = out_filename + '_sim_ppp_hist_conv.txt'
-            else:
-                out_filename_spec = 'sim_ppp.txt'
-                out_filename_hist = 'sim_ppp_hist.txt'
-                out_filename_hist_conv = 'sim_ppp_hist_conv.txt'
-            np.savetxt(out_filename_hist_conv, convolved_histogram)
 
         return convolved_histogram

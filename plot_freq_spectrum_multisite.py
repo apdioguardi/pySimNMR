@@ -39,45 +39,48 @@ import os
 ### PARAMETERS ################################################################
 
 ##----NMR Parameters-----------------------------------------------------------
-n = 2 #number of sites, to make testing easier (lists can be multiplied by an integer n, giving a list with n identical elements)
-isotope_list = ['125Te', '65Cu_arneil'] #I use 11.285 MHz/T from Arneil with 0.2394 % shift for copper metal
+n = 1 #number of sites, to make testing easier (lists can be multiplied by an integer n, giving a list with n identical elements)
+isotope_list = ['73Ge'] #63Ge #I use 11.285 MHz/T from Arneil with 0.2394 % shift for copper metal
 site_multiplicity_list = [1]*n  # scales individual relative intensities
-Ka_list = [0, 0.2394]           # shift tensor elements (units = percent) 85.416
-Kb_list = [0, 0.2394]
-Kc_list = [0, 0.2394]
+Ka_list = [0]*n                # shift tensor elements (units = percent)
+Kb_list = [0]*n
+Kc_list = [0]*n
 va_list = [None]*n  # only functions with exact diag; two modes: va and vb=None and eta=number OR 
 vb_list = [None]*n  # only functions with exact diag; va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
-vc_list = [0]*n     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [0]*n  # asymmetry parameter (unitless)
-H0 = 7.0487           # magnetic field  (units = T)
+vc_list = [0.25]*n     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [0.7]*n  # asymmetry parameter (unitless)
+H0 = 8.0           # magnetic field  (units = T)
 Hinta_list = [0]*n  # internal field in a direction (units = T)
 Hintb_list = [0]*n  # ... b
 Hintc_list = [0]*n  # ... c these are only taken into account in exact diag
 
 #----2nd-order-specific inputs-------------------------------------------------
 phi_deg_list = [0]*n 
-theta_deg_list = [0]*n
+theta_deg_list = [35]*n
 
 #----exact diag specific inputs------------------------------------------------
-mtx_elem_min=0.5                     # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
+mtx_elem_min = 0.5                     # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
 phi_z_deg_list =         [0]*n           # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
-theta_x_prime_deg_list = [0]*n # Range: (0-180) these values are in degrees and converted to radians in the code
+theta_x_prime_deg_list = [35]*n # Range: (0-180) these values are in degrees and converted to radians in the code
 psi_z_prime_deg_list =   [0]*n    # Range: (0-360)
 
 ##----Simulation control-------------------------------------------------------
 # sim_type mode options are either 'exact diag' or '2nd order', internal fields are taken into account in 'exact diag' mode
-#sim_type = '2nd order'
-sim_type = 'exact diag'
+# 2nd oder should not be used if \nu_L ~ \nu_Q. For high-spin nuclei (eg 115In) see https://doi.org/10.1103/PhysRev.145.302 for discussion of 2nd- and 3rd-order effects. 3rd order effects begin to manifest at approximately \nu_L/\nu_Q ~ 5, and then ed should be used.
 
-min_freq = 85                  # units = MHz
-max_freq = 97                           # units = MHz
-n_freq_points = 2e4                    # number of bins for the histogram
+#sim_type = 'exact diag'
+sim_type = '2nd order'
+
+cent_freq = 1.5*H0
+min_freq = cent_freq - 0.6       # units = MHz
+max_freq = cent_freq + 0.6       # units = MHz
+n_freq_points = 1e3                    # number of bins for the histogram
 convolution_function_list = ['gauss']*n   # 'gauss' and 'lor' are implemented
-conv_FWHM_list = [0.02]*n      # Gaussian or Lorentzian of FWHM conv_FWHM (units = MHz)
-conv_vQ_FWHM_list = [0.01]*n    # Gaussian or Lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
+conv_FWHM_list = [0.01]*n      # Gaussian or Lorentzian of FWHM conv_FWHM (units = MHz)
+conv_vQ_FWHM_list = [1e-6]*n    # Gaussian or Lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
 
 ##----Background control-------------------------------------------------------
-bgd = [0.1]   #[0] = no background
+bgd = [0]   #[0] = no background
             #[offset] = constant background
             #[offset, slope] = linear background
             #[center, width, intensity] = gaussian background
@@ -102,17 +105,76 @@ y_low_limit = 0
 y_high_limit = 1.1
 
 ##----Exporting Simulated Spectrum---------------------------------------------
-sim_export_file='test.txt'    # if you want to export your simulation, enter the path to the file here, otherwise write exportfile = ''
+sim_export_file='fit_test_input_data_2ndord.txt'    # if you want to export your simulation, enter the path to the file here, otherwise write exportfile = ''
 
 ###############################################################################
 ###############################################################################
+# 0.075 T
+# freq_spec_ed; freq_array = [0.69344074 0.49266436 0.51590857]
+# freq_array 2nd order =     [0.6464687  0.49132494 0.45078439]
 
+# 0.085 T
+# freq_spec_ed; freq_array = [0.76209857 0.57212001 0.58091727]
+# freq_array 2nd order =     [0.71961891 0.57121651 0.52393459]
 
+# 0.1 T
+# freq_spec_ed; freq_array = [0.86646358 0.68906905 0.68153087]
+# freq_array 2nd order =     [0.82934422 0.68852586 0.6336599]
 
+# 0.15 T
+# freq_spec_ed; freq_array = [1.2211497  1.06875722 1.03042906]
+# freq_array 2nd order =     [1.19509525 1.06860229 0.99941093]
 
+# 0.2 T
+# freq_spec_ed; freq_array = [1.58088506 1.44158036 1.38803081]
+# freq_array 2nd order =     [1.56084628 1.44151602 1.36516196]  
 
+# 0.3 T
+# freq_spec_ed; freq_array = [2.30603977 2.18019961 2.11162555]
+# freq_array 2nd order =     [2.29234834 2.18018078 2.09666402]
 
+# 0.4 T
+# freq_spec_ed; freq_array = [3.03424301 2.9152721  2.83927556]
+# freq_array 2nd order =     [3.0238504  2.91526419 2.82816608]
 
+# 0.5 T
+# freq_spec_ed; freq_array = [3.76372581 3.6489191  3.56850101]
+# freq_array 2nd order =     [3.75535246 3.64891506 3.55966815]
+
+# 0.75 T
+# freq_spec_ed; freq_array = [5.58974223 5.48053649 5.39426247]
+# freq_array 2nd order =     [5.3884233  5.48053529 5.58410761]
+
+# 1 T
+# freq_spec_ed; freq_array = [7.41710827 7.31072349 7.22153907]
+# freq_array 2nd order =     [7.21717845 7.31072299 7.41286277]
+# 1.5 T
+# freq_spec_ed; freq_array = [11.07321637 10.96966598 10.87758324]
+# freq_array 2nd order =     [11.07037307 10.96966583 10.87468875]
+
+# 3 T
+# freq_spec_ed; freq_array = [22.04433208 21.9436293  21.84866057]
+# freq_array 2nd order =     [22.04290398 21.94362928 21.84721966]
+
+# 7.5 T
+# freq_spec_ed; freq_array = [54.96106949 54.86208154 54.76538723]
+# freq_array 2nd order =     [54.96049671 54.86208154 54.76481239] 
+
+# 15 T
+# freq_spec_ed; freq_array = [109.82343791 109.7250226  109.62775411]
+# freq_array 2nd order =     [109.82315126 109.7250226  109.62746695]
+
+# 30 T
+# freq_spec_ed; freq_array = [219.54860376 219.45047496 219.35291957]
+# freq_array 2nd order =     [219.54846037 219.45047496 219.35277605]
+
+# 100 T
+# freq_spec_ed; freq_array = [731.59994589 731.50201773 731.40426159]
+# freq_array 2nd order =     [731.59990286 731.50201773 731.40421855  ]
+
+# 1000 T
+# freq_spec_ed; freq_array = [7315.11845352 7315.0206027 6 7314.92276921]
+# freq_array =               [7315.11844922 7315.02060276 7314.9227649]
 
 
 
@@ -178,11 +240,11 @@ if sim_type=='2nd order':
     for isotope in isotope_list:
         # instantiate the simulation class
         sim = pySimNMR.SimNMR(isotope)
-        gamma=sim.isotope_data_dict[isotope]["gamma"]
+        gamma = sim.isotope_data_dict[isotope]["gamma"]
         gamma_list.append(gamma)
-        I0=sim.isotope_data_dict[isotope]["I0"]
-        #
-        sim_export_file_single=sim_export_file+'_'+isotope+'_'+str(i)
+        I0 = sim.isotope_data_dict[isotope]["I0"]
+        print('I0', I0 )
+        sim_export_file_single = sim_export_file + '_' + isotope + '_' + str(i)
 
         #######################################
         t0 = time.time()
@@ -208,10 +270,9 @@ if sim_type=='2nd order':
                                     broadening_func=convolution_function_list[i],
                                     FWHM_MHz=conv_FWHM_list[i]
                                     )
-        print('spec')
-        print(spec)
-        spec[:,1] = spec[:,1]*site_multiplicity_list[i]
-        spec_ind_list.append(spec)
+        sim_x = spec[:,0]
+        spec_y = spec[:,1]*site_multiplicity_list[i]
+        spec_ind_list.append(spec_y)
         
         spec_ind_name_list.append(isotope + '_{}'.format(i))
         i=i+1
@@ -234,6 +295,8 @@ elif sim_type=='exact diag':
     spec_ind_list = []
     gamma_list=[]
     spec_ind_name_list=[]
+    # create freq array at which to simulate spectrum
+    sim_x = np.linspace(min_freq, max_freq, n_freq_points)
 
     for isotope in isotope_list:
         # instantiate the simulation class
@@ -255,8 +318,9 @@ elif sim_type=='exact diag':
         #######################################
         t0 = time.time()
         ###################
-        spec = sim.freq_spec_edpp(
-                                H0=H0, 
+        spec = sim.freq_spec_ed(
+                                x=sim_x,
+                                H0=H0,
                                 Ka=Ka_list[i], 
                                 Kb=Kb_list[i], 
                                 Kc=Kc_list[i], 
@@ -268,20 +332,15 @@ elif sim_type=='exact diag':
                                 Hinta=Hinta_list[i],
                                 Hintb=Hintb_list[i],
                                 Hintc=Hintc_list[i],
-                                mtx_elem_min=mtx_elem_min, 
+                                mtx_elem_min=mtx_elem_min,
                                 min_freq=min_freq, 
                                 max_freq=max_freq,
-                                FWHM_MHz=conv_FWHM_list[i],
-                                FWHM_dvQ_MHz=conv_vQ_FWHM_list[i],
-                                broadening_func=convolution_function_list[i],
-                                baseline=0.5,
-                                nbins=n_freq_points,
-                                save_files_bool=False,
-                                out_filename=sim_export_file
+                                FWHM=conv_FWHM_list[i],
+                                FWHM_vQ=conv_vQ_FWHM_list[i],
+                                line_shape_func=convolution_function_list[i]
                                )
-        spec[:,1] = spec[:,1]*site_multiplicity_list[i]
+        spec = spec*site_multiplicity_list[i]
         spec_ind_list.append(spec)
-        
         spec_ind_name_list.append(isotope + '_{}'.format(i))
         i=i+1
     ###################
@@ -314,25 +373,28 @@ for n in range(len(spec_ind_list)):
     if n==0:
         spec_sum = np.copy(spec_ind_list[n])
     else:
-        spec_sum[:, 1] = spec_sum[:,  1] + spec_ind_list[n][:, 1]
+        spec_sum = spec_sum + spec_ind_list[n]
 
-sim_x = spec_sum[:, 0]
-sim_y = spec_sum[:, 1]
+sim_x = sim_x
+sim_y = spec_sum
+#print('sim_y', sim_y)
 #normalize
 max_sum_value = sim_y.max()
+#print('max_sum_value', max_sum_value)
 sim_y = sim_y/max_sum_value
+#print('sim_y normalized', sim_y)
 
 # background correction
 if len(bgd) == 1:
-    sim_y = (sim_y + bgd[0])/(max(sim_y) + bgd[0])
+    sim_y = (sim_y + bgd[0])/(sim_y.max() + bgd[0])
 if len(bgd) == 2:
     sim_y = bgd[1] + sim_x*bgd[2] + sim_y
-    sim_y = sim_y/max(sim_y)
+    sim_y = sim_y/sim_y.max()
 if len(bgd) == 3:
     corr = (1.0/(np.sqrt(2*np.pi)*bgd[1]))*np.exp(-(sim_x-bgd[0])**2/(2*bgd[1]**2))
-    corr = corr/max(corr)*bgd[2]
+    corr = corr/corr.max()*bgd[2]
     sim_y = corr + sim_y
-    sim_y = sim_y/max(sim_y)
+    sim_y = sim_y/sim_y.max()
 
 # save full spectrum
 if save_files_bool:

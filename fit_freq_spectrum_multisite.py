@@ -3,18 +3,18 @@
 ### PARAMETERS ################################################################
 ##----experimental data file---------------------------------------------------
 # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
-exp_data_file = 'dummy_spec_twosite_2021-10-21.txt'
+exp_data_file = './testing/fit_test_input_data.txt'
 number_of_header_lines = 0    # number of lines which are ignored in the begining of the data file
 exp_data_delimiter = ' '      # tell numpy which delimter your experimental data file has 
-missing_values_string = 'nan'
-exp_x_scaling = 1             # to scale the experimental data's frequency axis to MHz if units don't match
+missing_values_string = None #'nan'
+exp_x_scaling = 1             # to scale the experimental data's frequency axis to MHz if units don't match: freq_MHz = freq_unknown_units*exp_x_scaling
 
 ##----NMR Parameters/Least squares fitting control-----------------------------
 minimization_algorithm = 'leastsq' # leastsq (default), dual_annealing, cg, nelder, basinhopping # https://lmfit.github.io/lmfit-py/fitting.html#lmfit.minimizer.minimize
 epsilon = None # 0.001 # step size for calculating derivatives in the curve fitting, set to None for default value
 verbose_bool = False # set to True to show the change of variables per iteration of the minimizer
-H0 = [7.0]              # magnetic field  (units = T)
-isotope_list = ['75As', '75As']
+H0 = [8.0]              # magnetic field  (units = T)
+isotope_list = ['73Ge']
 
 # vary and constrain parameters
 # format is list of sublists of the form:
@@ -27,32 +27,32 @@ isotope_list = ['75As', '75As']
 # expression_based_on_par_names can include a variety of operators, functions, and constants: https://lmfit.github.io/lmfit-py/constraints.html
 # example: Ka_list = [[0.5, True, 0, 1.5], [1.0], ['Ka_75As_0']]
 
-amplitude_list = [[0.01, True], ['amplitude_75As_0']]        # scales individual relative intensities of the summed spectra
-Ka_list = [[0], [0.2]]           # shift tensor elements (units = percent)
-Kb_list = [[0], [0.2]]
-Kc_list = [[0.01, True], [0.22, True]]
-va_list = [[None], [None]]  # only functions with exact diag; two modes: va and vb=None and eta=number OR 
-vb_list = [[None], [None]]  # only functions with exact diag; va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
-vc_list = [[0.25, True], [0.5, True]]     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [[0], [0]]  # asymmetry parameter (unitless)
+amplitude_list = [[0.001, True]]        # scales individual relative intensities of the summed spectra
+Ka_list = [[0.0]]           # shift tensor elements (units = percent)
+Kb_list = [[0.0]]
+Kc_list = [[0.0]]
+va_list = [[None]]  # only functions with exact diag; two modes: va and vb=None and eta=number OR 
+vb_list = [[None]]  # only functions with exact diag; va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
+vc_list = [[0.248]]     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [[0.7]]  # asymmetry parameter (unitless)
 
-Hinta_list = [[0], [0]]  # internal field in a direction (units = T)
-Hintb_list = [[0], [0]]  # ... b
-Hintc_list = [[0], [0]]  # ... c these are only taken into account in exact diag
+Hinta_list = [[0]]  # internal field in a direction (units = T)
+Hintb_list = [[0]]  # ... b
+Hintc_list = [[0]]  # ... c these are only taken into account in exact diag
 
 #----exact-diagonalization-specific inputs------------------------------------------------
-mtx_elem_min = 0.1                # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
-phi_z_deg_list = [[0], [0]]   # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
-theta_xp_deg_list = [[0], [0]] # Range: (0-180) these values are in degrees and converted to radians in the code
-psi_zp_deg_list = [[0], [0]]  # Range: (0-360)
+mtx_elem_min = 0.5                # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
+phi_z_deg_list = [[0]]   # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
+theta_xp_deg_list = [[34, True]] # Range: (0-180) these values are in degrees and converted to radians in the code
+psi_zp_deg_list = [[0]]  # Range: (0-360)
 
 ##----Simulation control-------------------------------------------------------
-min_freq = 50.5                           # units = MHz
-max_freq = 52                             # units = MHz
+min_freq = 11.4                           # units = MHz 
+max_freq = 12.6                            # units = MHz
 n_plot_points = 1000                    # number of points in the plotted guess and fit
-line_shape_func_list = ['gauss', 'gauss']   # 'gauss' (Gaussian) and 'lor' (Lorentzian) line shapes are implemented
-FWHM_list = [[0.015, True, 0, 1], [0.04, True, 0, 1]]       #  (units = MHz)
-FWHM_vQ_list = [[0.015, True, 0, 1], [0.031, True, 0, 1]]    # additional FWHM applied to scaled by transition number for 
+line_shape_func_list = ['gauss']   # 'gauss' (Gaussian) and 'lor' (Lorentzian) line shapes are implemented
+FWHM_list = [[0.01]]#, True, 0, 1]]       #  (units = MHz)
+FWHM_vQ_list = [[0.00001]]    # additional FWHM applied to scaled by transition number for 
                                 # line shape caused by distribution of EFG values (units = MHz)
                                 # total line shape satellite transitions will be (FWHM_list[i] + n*FWHM_vQ_list[i])
                                 # where n is the transition index (1st satellite has n=1, 2nd has n=2, etc.)
@@ -62,7 +62,7 @@ FWHM_vQ_list = [[0.015, True, 0, 1], [0.031, True, 0, 1]]    # additional FWHM a
 #[[offset], [slope]] = linear background
 #[[center], [width], [intensity]] = gaussian background
 # so for offset initial value of 5.0 allowed to vary between 0 and 10: background_list = [[5.0, True, 0, 10]]
-background_list = [[0.1]]
+background_list = [[0]]
 #background_list = [[0.01, True, 0, 1], [2, True, 1, 3]]
 #background_list = [[0.01, True, 0, 1], [2.5, True, 0.1, 10], [5, True, 3, 6]]
 
@@ -75,11 +75,12 @@ x_axis_min = min_freq
 x_axis_max = max_freq
 y_axis_min = None
 y_axis_max = None
+exp_plot_style_str = 'k-' # e.g. 'ko-' for black circles connected by lines, 'gs' for g=green s=squares
 
 ##----Exporting Simulated Spectrum---------------------------------------------
 # if you want to export your simulation, enter the path to the file here
 # otherwise write exportfile = ''
-sim_export_file = 'dummy_spec_twosite_fit_2021-10-21.txt'
+sim_export_file = './testing/fit_test_output.txt'
 
 ###############################################################################
 ###############################################################################
@@ -438,7 +439,7 @@ def model_function(par_dict,
         
         # use the built in SimNMR methods to generate the rotation matrices
         # lower case r matrices are for rotation of the shift tensor
-        #  SR matrices are for spin-space rotation of the quadrupole Hamiltonian
+        # SR matrices are for spin-space rotation of the quadrupole Hamiltonian
         phi_z = np.array([par_dict[phi_z_deg_key]])*np.pi/180
         theta_xp = np.array([par_dict[theta_xp_deg_key]])*np.pi/180
         psi_zp = np.array([par_dict[psi_zp_deg_key]])*np.pi/180
@@ -450,9 +451,9 @@ def model_function(par_dict,
                                            theta_xp,
                                            psi_zp)
         rotation_matrices = (r, ri, SR, SRi)
-        
+        # generate spectrum
         spec = sim.freq_spec_ed(x=x,
-                                H0 = par_dict['H0'],
+                                H0=par_dict['H0'],
                                 Ka=par_dict[Ka_key], 
                                 Kb=par_dict[Kb_key], 
                                 Kc=par_dict[Kc_key], 
@@ -701,8 +702,8 @@ def fit_and_plot(input_metadata,
     plt.rcParams['figure.figsize'] = 10, 4.5 # width,height in inches
     fig, (ax, lax) = plt.subplots(ncols=2, gridspec_kw={'width_ratios':plot_legend_width_ratio})
 
-    # plot experimental data first as black lines
-    ax.plot(exp_data_x, exp_data_y, 'k-')
+    # plot experimental data first
+    ax.plot(exp_data_x, exp_data_y, exp_plot_style_str)
 
     # plot and save individual spectra if there are more than one
     spec_ind_list = output_metadata_best_fit.spec_ind_list
@@ -857,7 +858,7 @@ exp_data = np.genfromtxt(fname=exp_data_file,
                          missing_values=missing_values_string)
 exp_x = exp_data[:, 0]*exp_x_scaling
 exp_y = exp_data[:, 1]
-
+print(exp_x, exp_y)
 
 
 fit_output = fit_and_plot(input_metadata,
