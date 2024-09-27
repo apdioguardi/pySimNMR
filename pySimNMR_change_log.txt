@@ -7,6 +7,20 @@ Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
 ###############################################################################
 ###############################################################################
 
+v0.15.3
+- a bug was found in which, for certain combinations of parameters, the number of calcd
+  matrix elements, frequencies, and transitions was inconsistent; specifically for 
+  eta!=0 and intermediate euler angles. to solve this a new exact diagonalization method
+  exact_diag was constructed to solve the issue.
+- exact_diag replaces freq_prob_trans_ed and also computers the parent eigenstates of 
+  the resonances and the mixing coefficients so we can characterize the transitions when 
+  the eigenstates become strongly mixed, ie each eigenstate is a linear superposition of 
+  the parent eigenstates of the Zeeman Hamiltonian
+- freq_spec_ed_mix was written to use this method, but does not yet utilize the mixing
+  coefs
+- the plot_freq_spectrum_multisite script is currently the only script to use exact_diag
+  (and freq_spec_ed_mix)
+
 v0.15.2 - 2024-03-27 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - propegated the mistake in intensities below to the field-swept ED spectrum simulation
 
