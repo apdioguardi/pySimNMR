@@ -7,6 +7,30 @@ Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
 ###############################################################################
 ###############################################################################
 
+v0.15.4
+- added a new method to calculate and save rotation matrices for exact diagonalization
+  powder patter simulation
+    - the method pySimNMR.SimNMR.random_rotation_matrices calculates and saves or loads 
+      random rotation matrices for use by other methods to calculate exact diag powder 
+      patterns. 
+    - uses a signle hdf5 file to save the real space, 
+      and spin space rotation matrices. 
+    - checks to see which spins are required and only generates one stacked 
+      array of rotation matrices (eg 75As and 63Cu, both I0=3/2, would use the same 
+      array of spin-space rotation matrices to save memory and disk space)
+    - only generates one stacked array of real-space rotation matrices to be reused
+      for each isotope
+    - returns a dict of rotation matrices organized by real/spin space, and then by spin
+    - stores the hdf5 file with the same structure, and a list of strings of unique spins
+      so these can be accessed and the method can determine next time if new matrices 
+      need to be calculated (eg adding another isotope to a simulation, using the same
+      n_samples, will not reclaculate the rotation matrix arrays for that spin)
+- updated frequency swept and field swept pp methods to use above function
+- updated the field-swept pp method to work with exact diag, and also run parallelized to
+  reduce compute time by x5.6 on my 4 core laptop.
+- updated isotopeDict.py to include an "I0_string" key for each isotope to more easily 
+  determine if a given spin already exists in the rotation matrix h5 file. 
+
 v0.15.3
 - a bug was found in which, for certain combinations of parameters, the number of calcd
   matrix elements, frequencies, and transitions was inconsistent; specifically for 

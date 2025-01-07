@@ -3,13 +3,12 @@
 plot_field_powder_spectrum
 =========
 ____________
-Version: 0.1
 Author: Adam P. Dioguardi
 ------------
 
 This file is part of the pySimNMR project.
 
-Plots a powder spectrum according to the given parameters.
+Plots a field-swept powder spectrum according to the given parameters.
 Additionally a measured data given as a text file can be displayed for comparison.
 
 ###############################################################################
@@ -27,39 +26,51 @@ import os.path
 ### PARAMETERS ################################################################
 
 ##----NMR Parameters-----------------------------------------------------------
-isotope_list = ['11B','11B','11B']                # need to add many nuclei to the dictionary still... program will fail if not added at this stage of development
-site_multiplicity_list = [1,1,1]               # scales individual relative intensities of the summed powder patterns
-vc_list = [0.418,0.583,0.46]                          # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [0,0,0.76]                       # unitless
-Ka_list = [-0.0295,-0.0295,-0.0525]                        # shift tensor elements (units = percent)
-Kb_list = [-0.0295,-0.0295,-0.0525]
-Kc_list = [-0.0295,-0.0295,-0.0525]
-f0 = 47.213                       # observed frequency (units = MHz)
+isotope_list = ['51V']                # need to add many nuclei to the dictionary still... program will fail if not added at this stage of development
+site_multiplicity_list = [1]               # scales individual relative intensities of the summed powder patterns
+
+Ka_list = [1.65]                        # shift tensor elements (units = percent)
+Kb_list = [1.0]
+Kc_list = [0.8]
+
+vQ_list = [0.445]                          # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [0.7]                       # unitless
+vc_list = [np.round(vQ/np.sqrt(1 - eta**2/3), 3) for vQ,eta in zip(vQ_list, eta_list)]      
+
+Hinta_list = [0]
+Hintb_list = [0]
+Hintc_list = [0]
+
+f0 = 34.75        # observed frequency (units = MHz)
 
 ##----Simulation control-------------------------------------------------------
-min_field = 3.4                 # units = MHz, note should make this apply for 2nd order as well.
-max_field = 3.52               # units = MHz
-n_field_points = 1000            # number of bins for the histogram
-convolution_function_list = ['gauss','gauss','gauss']  # 'gauss' and 'lor' are implemented
-conv_FWHM_list = [0.0013,0.0013,0.0013]                # gaussian or lorentzian of FWHM conv_FWHM (units = MHz)
-conv_vQ_FWHM_list = [0.0001,0.0001,0.0001]              # gaussian or lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
+sim_type = 'exact diag' #'2nd order'        # currently the only option is '2nd order', exact diag in devel
+min_field = 2.85                 # units = T
+max_field = 3.25               # units = T
+n_field_points = 250            # number of points on the x (field) axis
+delta_f0 = 0.015                      #frequency tolerance (+-delta_f0/2) freqs will be kept during exact diagonalization. may need to play with this in relation to the broadening functions below. if spectra is broad making this larger will make the powder pattern less noisy
+convolution_function_list = ['gauss']  # 'gauss' and 'lor' are implemented
+conv_FWHM_list = [0.005]                # gaussian or lorentzian of FWHM conv_FWHM (units = MHz)
+conv_vQ_FWHM_list = [0.1e-7]              # gaussian or lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
 mtx_elem_min = 0.5              # exact diagonalization only. In general 0.5 is a good starting point. This may cause issues with conv_vQ_FWHM, can resolve by increasing mtx_elem_min
-recalc_random_samples=False     # if True, calculate fresh random angle sampling; if False, use the samples from saved (only relevant for exact diag)
-n_samples = 1e6                 # good exact diag powder spectra at roughly 1e5 (for very fast calcs). 2nd ord pert much faster so 1e7 possible
-                                # NOTE: the saved binary files are actually the stacked arrays of rotation matrices and can get quite large (hundreds of MB) and 
+recalc_random_samples = False     # if True, calculate fresh random angle sampling; if False, use the samples from saved (only relevant for exact diag)
+n_samples = 1e3                 # field-swept pp will be significantly slower than freq swept until i figure out how to double-cast"
+                                # NOTE: the saved hdf5 file contains the stacked arrays of rotation matrices and can get quite large (hundreds of MB or more) and 
                                 # memory issues can arrise here...
 
 ##----Background control-------------------------------------------------------
-bgd = [92.5, 0.1, 0.3]          #[0] = no background
+bgd = [0]          #[0] = no background
                                 #[offset] = constant background
                                 #[offset, slope] = linear background
                                 #[center, width, intensity] = gaussian background
 
 ##----Plotting data from data File---------------------------------------------
-exp_data_file=''#'B11_HS_47p213MHz_4K_ei_H++.txt'                # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
+exp_data_file='Intensity_field_sweep_H=2.868to3.2T_2d_ft_integral_field_nmrresponse.txt'#'B11_HS_47p213MHz_4K_ei_H++.txt'                # if you want to plot data also, enter the path to the file here, otherwise write datafile='';
 #exp_data_file='B11_HS_49p277MHz_4K_ei_H++.txt'  
 number_of_header_lines=1        # number of lines which are ignored in the begining of the data file
-exp_data_delimiter='\t'          # tell numpy which delimter your experimental data file has 
+exp_data_delimiter=' '          # tell numpy which delimter your experimental data file has 
+exp_data_x_column_index = 0           # column index of the independent variable (field)
+exp_data_y_column_index = 1           # column index of the dependent variable (intensity)
 exp_x_scaling=1               # to scale the experimental data to Tesla if units don't match
 exp_y_scaling=1
 
@@ -94,7 +105,7 @@ sim_export_file= ''  #'B11_HS_49p277MHz_4K_ei_H++'          # if you want to exp
 
 
 
-sim_type = '2nd order'        # currently the only option is '2nd order'
+
 
 #sanity checks
 if sim_type=='exact diag' and n_samples>=2e5 and recalc_random_samples:
@@ -152,14 +163,17 @@ if sim_export_file=='':
 else:
     save_files_bool=True
 
-if recalc_random_samples==False:
-    r_ex_bool = os.path.isfile('r.npy') 
-    ri_ex_bool = os.path.isfile('ri.npy') 
-    R_ex_bool = os.path.isfile('RR.npy') 
-    Ri_ex_bool = os.path.isfile('RRi.npy') 
-    if not (r_ex_bool and ri_ex_bool and R_ex_bool and Ri_ex_bool):
-        print('Sorry, could not find the rotation matrix npy files. Generating new random samples...')
-        recalc_random_samples = True
+# calculate (and save) or load uniform random sample of angles via rotation matrices
+if sim_type == 'exact diag':
+    #######################################
+    t0 = time.time()
+    ###################
+    print('field sweep exact diagonalization not yet fully implemented. this is a test:')
+    print('Running in Exact Diagonalization Mode')
+    sim = pySimNMR.SimNMR('1H') # here the isotope does not matter as the isotope list will be fed into the function below
+    rotation_matrix_dict = sim.random_rotation_matrices(isotope_list,
+                                                recalc_random_samples=recalc_random_samples,
+                                                n_samples=n_samples)
 
 i = 0
 pp_ind_list = []
@@ -172,87 +186,46 @@ for isotope in isotope_list:
     sim = pySimNMR.SimNMR(isotope)
     gamma_list.append(sim.isotope_data_dict[isotope]["gamma"])
     I0_list.append(sim.isotope_data_dict[isotope]["I0"])
-    
-    #
-    sim_export_file_single=sim_export_file+'_'+isotope+'_'+str(i)
+    sim_export_file_single=f'{sim_export_file}_{isotope}_{i}'
     # run the simulation
     if sim_type=='exact diag':
-        print('field sweep exact diagonalization not yet implemented')
-        # print('Running in Exact Diagonalization Mode')
-        # # calculate (and save) or load uniform random sample of angles
-        # # note, have not allowed for saving with 2nd order pert...
-        # #######################################
-        # t0 = time.time()
-        # ###################
-        # if recalc_random_samples:
-        #     print('calculating and saving random samples for exact diagonalization...')
-        
-        #     phi_z_array = np.random.uniform(0,2*np.pi,size=int(n_samples))
-        #     theta_xp_array = np.arccos(np.random.uniform(1,-1,size=int(n_samples)))
-        #     psi_zp_array = np.random.uniform(0,2*np.pi,size=int(n_samples))
+        I0_string = sim.isotope_data_dict[isotope]['I0_string']
+        print('Simulating powder pattern...')
+        r = rotation_matrix_dict['real_space']['r']
+        ri = rotation_matrix_dict['real_space']['ri']
+        r_spin = rotation_matrix_dict['spin_space'][f'I0={I0_string}']['r_spin']
+        ri_spin = rotation_matrix_dict['spin_space'][f'I0={I0_string}']['ri_spin']
+        rotation_matrices = (r, ri, r_spin, ri_spin)
 
-        #     rz,rzi = sim.rz_matrices(phi_z_array) #use the built in SimNMR methods to generate the rotation matrices
-        #     rxp,rxpi = sim.rx_matrices(theta_xp_array)  # lower case r matrices are for rotation of the shift tensor
-        #     rzp,rzpi = sim.rz_matrices(psi_zp_array)
-        #     Rz,Rzi = sim.Rz_matrices(phi_z_array)       # capital R matrices are for rotation of the quadurpolar hamiltonian
-        #     Rxp,Rxpi = sim.Rx_matrices(theta_xp_array)  
-        #     Rzp,Rzpi = sim.Rz_matrices(psi_zp_array)
+        va_list = [None]*len(vc_list)  # only need eta here so just make these transparently the same length of none lists
+        vb_list = [None]*len(vc_list)  # 
 
-        #     r = rzp @ rxp @ rz # @ indicates matrix multiplication np.matmul
-        #     ri = rzi @ rxpi @ rzpi
-        #     RR = Rzp @ Rxp @ Rz
-        #     RRi = Rzi @ Rxpi @ Rzpi
-            
-        #     np.save('r.npy',r)
-        #     np.save('ri.npy',ri)
-        #     np.save('RR.npy',RR)
-        #     np.save('RRi.npy',RRi) #the files are saved in the working directory of the sim software
-        #     #np.savez('rotation_matrices',r=r,ri=ri,RR=RR,RRi=RRi) was not much smaller... maybe hd5 file would work better
-        #     ###################
-        #     t1 = time.time()
-        #     dt_str = str(t1-t0) + ' s'
-        #     print('random sample calculation took ' + dt_str)
-        #     #######################################
-        # else:
-        #     print('loading random samples for exact diagonalization...')
-            
-        #     r = np.load('r.npy')
-        #     ri = np.load('ri.npy')
-        #     RR = np.load('RR.npy')
-        #     RRi = np.load('RRi.npy')
-        
-        #     ###################
-        #     t1 = time.time()
-        #     dt_str = str(t1-t0) + ' s'
-        #     print('random sample loading took ' + dt_str)
-        #     #######################################
-        
-        # #######################################
-        # t0 = time.time()
-        # ###################
-        
-        # rot_mtx_tuple = (r,ri,RR,RRi)
-        # print('Simulating powder pattern...')
-        
-        # pp = sim.field_spec_edpp(
-        #                         f0=f0, 
-        #                         Ka=Ka_list[i], 
-        #                         Kb=Kb_list[i], 
-        #                         Kc=Kc_list[i], 
-        #                         vc=vc_list[i],
-        #                         eta=eta_list[i],
-        #                         rm_SRm_tuple=rot_mtx_tuple,
-        #                         mtx_elem_min=mtx_elem_min, 
-        #                         min_field=min_freq, 
-        #                         max_field=max_freq,
-        #                         FWHM_MHz=conv_FWHM_list[i],
-        #                         FWHM_dvQ_MHz=conv_vQ_FWHM_list[i],
-        #                         broadening_func=convolution_function_list[i],
-        #                         baseline=0.5,
-        #                         nbins=n_freq_points,
-        #                         save_files_bool=save_files_bool,
-        #                         out_filename=sim_export_file_single
-        #                        )
+        H0_array = np.linspace(start=min_field, stop=max_field, num=n_field_points)
+
+        pp = sim.field_spec_edpp_loop_parallel(
+                                      f0=f0, 
+                                      H0_array=H0_array,
+                                      Ka=Ka_list[i], 
+                                      Kb=Kb_list[i], 
+                                      Kc=Kc_list[i], 
+                                      va=va_list[i],
+                                      vb=vb_list[i],
+                                      vc=vc_list[i],
+                                      eta=eta_list[i],
+                                      rotation_matrices=rotation_matrices,
+                                      Hinta=Hinta_list[i],
+                                      Hintb=Hintb_list[i],
+                                      Hintc=Hintc_list[i],
+                                      mtx_elem_min=mtx_elem_min, 
+                                      min_field=min_field, 
+                                      max_field=max_field,
+                                      delta_f0=delta_f0,
+                                      FWHM=conv_FWHM_list[i],
+                                      FWHM_dvQ=conv_vQ_FWHM_list[i],
+                                      broadening_func=convolution_function_list[i],
+                                      save_files_bool=False,
+                                      out_filename=sim_export_file
+                                     )
     elif sim_type=='2nd order':
         print('Running in 2nd Order Perturbation Theory Mode')
         #######################################
@@ -301,8 +274,8 @@ fig, (ax,lax) = plt.subplots(ncols=2,gridspec_kw={"width_ratios":plot_legend_wid
 if exp_data_file!='':
     print('plotting experimental data for comparison')
     exp_data = np.genfromtxt(exp_data_file, delimiter=exp_data_delimiter, skip_header=number_of_header_lines)
-    exp_x = exp_data[:,0]*exp_x_scaling
-    exp_y = exp_data[:,1]
+    exp_x = exp_data[:,exp_data_x_column_index]*exp_x_scaling
+    exp_y = exp_data[:,exp_data_y_column_index]
     # normalize
     exp_y=exp_y_scaling*exp_y/exp_y.max()
     # plot experimental data first as black lines
@@ -364,7 +337,7 @@ ax.set_xlim(x_low_limit, x_high_limit)
 ax.set_ylim(y_low_limit, y_high_limit)
 
 # generate strings for the title and legend/details
-f0_str = r'$H_0$=' + str(f0) + r'T'
+f0_str = r'$f_0$=' + str(f0) + r'MHz'
 
 isotope_str = 'isotopes = ' + str(isotope_list)
 gamma_str = r'$\gamma = $ ' + str(gamma_list) + r' MHz/T'

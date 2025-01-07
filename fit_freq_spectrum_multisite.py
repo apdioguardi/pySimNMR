@@ -447,7 +447,7 @@ def model_function(par_dict,
         r, ri = sim.generate_r_matrices(phi_z,
                                         theta_xp,
                                         psi_zp)
-        SR, SRi = sim.generate_SR_matrices(phi_z,
+        SR, SRi = sim.generate_r_spin_matrices(phi_z,
                                            theta_xp,
                                            psi_zp)
         rotation_matrices = (r, ri, SR, SRi)
@@ -461,7 +461,7 @@ def model_function(par_dict,
                                 vb=par_dict[vb_key],
                                 vc=par_dict[vc_key],
                                 eta=par_dict[eta_key],
-                                rm_SRm_tuple=rotation_matrices,
+                                rotation_matrices=rotation_matrices,
                                 Hinta=par_dict[Hinta_key],
                                 Hintb=par_dict[Hintb_key],
                                 Hintc=par_dict[Hintc_key],

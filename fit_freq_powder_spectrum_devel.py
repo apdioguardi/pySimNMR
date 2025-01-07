@@ -3,8 +3,8 @@
 ### PARAMETERS ################################################################
 ##----experimental data file---------------------------------------------------
 # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
-exp_data_file = 'dummy_freq_pp.txt'
-number_of_header_lines = 0    # number of lines which are ignored in the begining of the data file
+exp_data_file = r'plot_freq_powder_spectrum_test_data_pp_noisy.txt'
+number_of_header_lines = 30    # number of lines which are ignored in the begining of the data file
 exp_data_delimiter = ' '      # tell numpy which delimter your experimental data file has 
 missing_values_string = 'nan'
 exp_x_scaling = 1             # to scale the experimental data's frequency axis to MHz if units don't match
@@ -13,8 +13,8 @@ exp_x_scaling = 1             # to scale the experimental data's frequency axis 
 minimization_algorithm = 'leastsq' # leastsq (default), dual_annealing, cg, nelder, basinhopping # https://lmfit.github.io/lmfit-py/fitting.html#lmfit.minimizer.minimize
 epsilon = None # 0.001 # step size for calculating derivatives in the curve fitting, set to None for default value
 verbose_bool = False # set to True to show the change of variables per iteration of the minimizer
-H0 = [7.0]              # magnetic field  (units = T)
-isotope_list = ['75As']
+H0 = [10.0]              # magnetic field  (units = T)
+isotope_list = ['63Cu']
 
 # vary and constrain parameters
 # format is list of sublists of the form:
@@ -27,37 +27,37 @@ isotope_list = ['75As']
 # expression_based_on_par_names can include a variety of operators, functions, and constants: https://lmfit.github.io/lmfit-py/constraints.html
 # example: Ka_list = [[0.5, True, 0, 1.5], [1.0], ['Ka_75As_0']]
 
-amplitude_list = [[0.01, True]]        # scales individual relative intensities of the summed spectra
-Ka_list = [[0]]           # shift tensor elements (units = percent)
-Kb_list = [[0]]
-Kc_list = [[0.01, True]]
+amplitude_list = [[1, True]]        # scales individual relative intensities of the summed spectra
+Ka_list = [[0.01]]           # shift tensor elements (units = percent)
+Kb_list = [[0.01]]
+Kc_list = [[0.01]]
 va_list = [[None]]  # only functions with exact diag; two modes: va and vb=None and eta=number OR 
 vb_list = [[None]]  # only functions with exact diag; va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
-vc_list = [[0.25, True]]     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [[0]]  # asymmetry parameter (unitless)
+vc_list = [[24.75, True]]     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [[0.01, True]]  # asymmetry parameter (unitless)
 
 Hinta_list = [[0]]  # internal field in a direction (units = T)
 Hintb_list = [[0]]  # ... b
 Hintc_list = [[0]]  # ... c these are only taken into account in exact diag
 
 #----exact-diagonalization-specific inputs------------------------------------------------
-mtx_elem_min = 0.1                # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
+mtx_elem_min = 0.1                # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions. ?Ahoy! add this to possible fit variables...
 
 ##----Simulation control-------------------------------------------------------
 sim_type = 'exact diag'        # options are 'exact diag' and '2nd order'
-min_freq = 50.5                           # units = MHz
-max_freq = 52                             # units = MHz
+min_freq = 75                           # units = MHz
+max_freq = 150                             # units = MHz
 n_plot_points = 1000                    # number of points in the plotted guess and fit
 line_shape_func_list = ['gauss']   # 'gauss' (Gaussian) and 'lor' (Lorentzian) line shapes are implemented
-FWHM_list = [[0.015, True, 0, 1]]       #  (units = MHz)
-FWHM_vQ_list = [[0.015, True, 0, 1]]    # additional FWHM applied to scaled by transition number for 
+FWHM_list = [[0.4, True, 0, 1]]       #  (units = MHz)
+FWHM_vQ_list = [[0.6, True, 0, 1]]    # additional FWHM applied to scaled by transition number for 
                                 # line shape caused by distribution of EFG values (units = MHz)
                                 # total line shape satellite transitions will be (FWHM_list[i] + n*FWHM_vQ_list[i])
                                 # where n is the transition index (1st satellite has n=1, 2nd has n=2, etc.)
 recalc_random_samples = False     # if True, calculate fresh random angle sampling; if False, use the samples from saved (only relevant for exact diag)
                                 # note that it would be best practice to generate this the first time, and then perform all subsequent fits using the same
                                 # random samples. if we change it for each fit, the best fit params may change slightly. the same samples will be used for each iteration
-                                # if this variable is true, and then the rotation matrices will be saved to files r.npy, ri.npy, SR.npy, and SRi.npy. These can then be used again in the next fits.
+                                # if this variable is true, and then the rotation matrices will be saved to files r.npy, ri.npy, r_spin.npy, and ri_spin.npy. These can then be used again in the next fits.
 n_samples = 1e5                 # good exact diag powder spectra at roughly 1e5 (for very fast calcs). 2nd ord pert much faster so 1e7 possible
                                 # NOTE: the saved binary files are actually the stacked arrays of rotation matrices and can get quite large (hundreds of MB) and 
                                 # memory issues can arrise here...
@@ -67,7 +67,7 @@ n_samples = 1e5                 # good exact diag powder spectra at roughly 1e5 
 #[[offset], [slope]] = linear background
 #[[center], [width], [intensity]] = gaussian background
 # so for offset initial value of 5.0 allowed to vary between 0 and 10: background_list = [[5.0, True, 0, 10]]
-background_list = [[0.1]]
+background_list = [[0.0]]
 #background_list = [[0.01, True, 0, 1], [2, True, 1, 3]]
 #background_list = [[0.01, True, 0, 1], [2.5, True, 0.1, 10], [5, True, 3, 6]]
 
@@ -89,7 +89,7 @@ y_axis_max = None
 ##----Exporting Simulated Spectrum---------------------------------------------
 # if you want to export your simulation, enter the path to the file here
 # otherwise write exportfile = ''
-sim_export_file = 'dummy_freq_pp_best_fit.txt'
+sim_export_file = r'plot_freq_powder_spectrum_test_data_pp_noisy_fit.txt'
 
 ###############################################################################
 ###############################################################################
@@ -127,6 +127,8 @@ import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import pySimNMR
 import lmfit
+import os
+import time
 
 
 class InputMetadata:
@@ -212,7 +214,7 @@ def populate_par_dict(output_par_dict,
         output_par_dict.add('H0', value=H0[0], vary=False)
     elif len(H0) == 2:
         output_par_dict.add('H0', value=H0[0], vary=H0[1])
-    elif len(par_values) == 4:
+    elif len(H0) == 4:
         output_par_dict.add('H0',
                             value=H0[0],
                             vary=H0[1],
@@ -344,9 +346,6 @@ def populate_par_dict(output_par_dict,
                      'Hinta': Hinta_list,
                      'Hintb': Hintb_list,
                      'Hintc': Hintc_list,
-                     'phi_z_deg': phi_z_deg_list,
-                     'theta_xp_deg': theta_xp_deg_list,
-                     'psi_zp_deg': psi_zp_deg_list,
                      'FWHM': FWHM_list,
                      'FWHM_vQ': FWHM_vQ_list}
     
@@ -355,37 +354,98 @@ def populate_par_dict(output_par_dict,
     expression_dict = {}
     for i in range(len(isotope_list)):
         for general_par_name in all_pars_dict:
-            specific_par_name = general_par_name + '_' + isotope_list[i] + '_{}'.format(i)
+            specific_par_name = f"{general_par_name}_{isotope_list[i]}_{i}"
             general_par_values = all_pars_dict[general_par_name]
-            if len(general_par_values[i]) == 1:
-                if type(general_par_values[i][0]) is str:
-                    # length 1 list is either a string expression, in which case
-                    # we need to add the other non-expression based 
-                    expression_dict[specific_par_name] = general_par_values[i][0]
-                else:
-                    # or a value to be held constant:
+            if general_par_values is not None:
+                if len(general_par_values[i])==1:
+                    if type(general_par_values[i][0]) is str:
+                        # length 1 list is either a string expression, in which case
+                        # we need to add the other non-expression based 
+                        expression_dict[specific_par_name] = general_par_values[i][0]
+                    else:
+                        # or a value to be held constant:
+                        output_par_dict.add(specific_par_name, 
+                                            value=general_par_values[i][0], 
+                                            vary=False)
+                elif len(general_par_values[i]) == 2:
+                    # length 2 list is a parameter to be varied (or allow for a mistake 
+                    # and the second list element can be False)
                     output_par_dict.add(specific_par_name, 
                                         value=general_par_values[i][0], 
-                                        vary=False)
-            elif len(general_par_values[i]) == 2:
-                # length 2 list is a parameter to be varied (or allow for a mistake 
-                # and the second list element can be False)
-                output_par_dict.add(specific_par_name, 
-                                    value=general_par_values[i][0], 
-                                    vary=general_par_values[i][1])
-            elif len(general_par_values[i]) == 4:
-                # 4 element list will be a variable parameter with min and max constraints
-                # note that we are forcing both min and max instead of one or another
-                output_par_dict.add(specific_par_name, 
-                                    value=general_par_values[i][0], 
-                                    vary=general_par_values[i][1],
-                                    min=general_par_values[i][2],
-                                    max=general_par_values[i][3])
+                                        vary=general_par_values[i][1])
+                elif len(general_par_values[i]) == 4:
+                    # 4 element list will be a variable parameter with min and max constraints
+                    # note that we are forcing both min and max instead of one or another
+                    output_par_dict.add(specific_par_name, 
+                                        value=general_par_values[i][0], 
+                                        vary=general_par_values[i][1],
+                                        min=general_par_values[i][2],
+                                        max=general_par_values[i][3])
     # now process and add expressions to the list. this must happen as there is a limitation
     # within lmfit that requires the expressions to contain only existing python objects
     for expression_par_name, expression in expression_dict.items():
         output_par_dict.add(expression_par_name, expr=expression)
 
+
+def calc_save_rand_rot_matrices(recalc_random_samples,
+
+                      ):
+    """
+    calculate or load a dict of rotation matrices
+    """
+
+    for isotope in isotope_list:
+        sim = pySimNMR.SimNMR(isotope)
+        if not recalc_random_samples:
+            r_ex_bool = os.path.isfile(f'rotation_matrices.h5')
+            if not (r_ex_bool and ri_ex_bool and r_spin_ex_bool and ri_spin_ex_bool):
+                print('Could not find the rotation matrix npy files. Generating new random samples...')
+                recalc_random_samples = True
+
+
+        #######################################
+        t0 = time.time()
+        ###################
+        if recalc_random_samples:
+            print('calculating and saving random samples for exact diagonalization...')
+        
+            phi_z_array = np.random.uniform(0, 2*np.pi, size=int(n_samples))
+            theta_xp_array = np.arccos(np.random.uniform(1, -1, size=int(n_samples)))
+            psi_zp_array = np.random.uniform(0, 2*np.pi, size=int(n_samples))
+
+            # use the built in SimNMR methods to generate the rotation matrices
+            # lower case r matrices are for rotation of the shift tensor
+            # capital R matrices are for rotation of the quadrupole Hamiltonian
+            r, ri = sim.generate_r_matrices(phi_z_array,
+                                            theta_xp_array,
+                                            psi_zp_array)
+            r_spin, ri_spin = sim.generate_r_spin_matrices(phi_z_array,
+                                                theta_xp_array,
+                                                psi_zp_array)
+
+            np.save('r.npy', r)
+            np.save('ri.npy', ri)
+            np.save('r_spin.npy', r_spin)
+            np.save('ri_spin.npy', ri_spin) #the files are saved in the working directory of the sim software
+
+            ###################
+            t1 = time.time()
+            dt_str = str(t1-t0) + ' s'
+            print('random sample calculation took ' + dt_str)
+            #######################################
+        else:
+            print('loading random samples for exact diagonalization...')
+            
+            r = np.load('r.npy')
+            ri = np.load('ri.npy')
+            r_spin = np.load('r_spin.npy')
+            ri_spin = np.load('ri_spin.npy')
+        
+            ###################
+            t1 = time.time()
+            dt_str = str(t1-t0) + ' s'
+            print('random sample loading took ' + dt_str)
+            #######################################
 
 
 def model_function(par_dict, 
@@ -429,37 +489,23 @@ def model_function(par_dict,
         gamma_list.append(sim.isotope_data_dict[isotope]["gamma_sigfigs"])
         
         # define the dictionary keys that we need to access the required parameters
-        amplitude_key = 'amplitude' + '_' + isotope + '_{}'.format(i)
-        Ka_key = 'Ka_' + isotope + '_{}'.format(i)
-        Kb_key = 'Kb_' + isotope + '_{}'.format(i)
-        Kc_key = 'Kc_' + isotope + '_{}'.format(i)
-        va_key = 'va_' + isotope + '_{}'.format(i)
-        vb_key = 'vb_' + isotope + '_{}'.format(i)
-        vc_key = 'vc_' + isotope + '_{}'.format(i)
-        eta_key = 'eta_' + isotope + '_{}'.format(i)
-        Hinta_key = 'Hinta_' + isotope + '_{}'.format(i)
-        Hintb_key = 'Hintb_' + isotope + '_{}'.format(i)
-        Hintc_key = 'Hintc_' + isotope + '_{}'.format(i)
-        phi_z_deg_key = 'phi_z_deg_' + isotope + '_{}'.format(i)
-        theta_xp_deg_key = 'theta_xp_deg_' + isotope + '_{}'.format(i)
-        psi_zp_deg_key = 'psi_zp_deg_' + isotope + '_{}'.format(i)
-        FWHM_key = 'FWHM_' + isotope + '_{}'.format(i)
-        FWHM_vQ_key = 'FWHM_vQ_' + isotope + '_{}'.format(i)
-        
-        # use the built in SimNMR methods to generate the rotation matrices
-        # lower case r matrices are for rotation of the shift tensor
-        #  SR matrices are for spin-space rotation of the quadrupole Hamiltonian
-        phi_z = np.array([par_dict[phi_z_deg_key]])*np.pi/180
-        theta_xp = np.array([par_dict[theta_xp_deg_key]])*np.pi/180
-        psi_zp = np.array([par_dict[psi_zp_deg_key]])*np.pi/180
-
-        r, ri = sim.generate_r_matrices(phi_z,
-                                        theta_xp,
-                                        psi_zp)
-        SR, SRi = sim.generate_SR_matrices(phi_z,
-                                           theta_xp,
-                                           psi_zp)
-        rotation_matrices = (r, ri, SR, SRi)
+        amplitude_key = f'amplitude_{isotope}_{i}'
+        Ka_key = f'Ka_{isotope}_{i}'
+        Kb_key = f'Kb_{isotope}_{i}'
+        Kc_key = f'Kc_{isotope}_{i}'
+        va_key = f'va_{isotope}_{i}'
+        vb_key = f'vb_{isotope}_{i}'
+        vc_key = f'vc_{isotope}_{i}'
+        eta_key = f'eta_{isotope}_{i}'
+        Hinta_key = f'Hinta_{isotope}_{i}'
+        Hintb_key = f'Hintb_{isotope}_{i}'
+        Hintc_key = f'Hintc_{isotope}_{i}'
+        r_key = f'r_{isotope}_{i}'
+        ri_key = f'ri_{isotope}_{i}'
+        r_spin_key = f'r_spin_{isotope}_{i}'
+        ri_spin_key = f'ri_spin_{isotope}_{i}'
+        FWHM_key = f'FWHM_{isotope}_{i}'
+        FWHM_vQ_key = f'FWHM_vQ_{isotope}_{i}'
         
         spec = sim.freq_spec_ed(x=x,
                                 H0 = par_dict['H0'],
@@ -470,7 +516,7 @@ def model_function(par_dict,
                                 vb=par_dict[vb_key],
                                 vc=par_dict[vc_key],
                                 eta=par_dict[eta_key],
-                                rm_SRm_tuple=rotation_matrices,
+                                rotation_matrices=rotation_matrices,
                                 Hinta=par_dict[Hinta_key],
                                 Hintb=par_dict[Hintb_key],
                                 Hintc=par_dict[Hintc_key],
@@ -716,6 +762,7 @@ def fit_and_plot(input_metadata,
 
     # plot and save individual spectra if there are more than one
     spec_ind_list = output_metadata_best_fit.spec_ind_list
+    spec_ind_name_list = output_metadata_best_fit.spec_ind_name_list
     if len(spec_ind_list) > 1:
         for n in range(len(spec_ind_list)):
             if plot_individual_bool:
@@ -838,9 +885,6 @@ input_metadata.eta_list = eta_list
 input_metadata.Hinta_list = Hinta_list
 input_metadata.Hintb_list = Hintb_list
 input_metadata.Hintc_list = Hintc_list
-input_metadata.phi_z_deg_list = phi_z_deg_list
-input_metadata.theta_xp_deg_list = theta_xp_deg_list
-input_metadata.psi_zp_deg_list = psi_zp_deg_list
 input_metadata.FWHM_list = FWHM_list
 input_metadata.FWHM_vQ_list = FWHM_vQ_list
 input_metadata.background_list = background_list

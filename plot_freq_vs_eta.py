@@ -103,7 +103,7 @@ t0 = time.time()
 r, ri = sim.generate_r_matrices(phi_z,
                                 theta_xp,
                                 psi_zp)
-SR, SRi = sim.generate_SR_matrices(phi_z,
+SR, SRi = sim.generate_r_spin_matrices(phi_z,
                                    theta_xp,
                                    psi_zp)
 rotation_matrices = (r, ri, SR, SRi)
@@ -121,7 +121,7 @@ for eta in eta_array:
                                     vb=vb,
                                     vc=vc,
                                     eta=eta,
-                                    rm_SRm_tuple=rotation_matrices,
+                                    rotation_matrices=rotation_matrices,
                                     mtx_elem_min=mtx_elem_min,
                                     min_freq=min_freq,
                                     max_freq=max_freq

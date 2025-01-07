@@ -185,7 +185,7 @@ for isotope in isotope_list:
     r, ri = sim.generate_r_matrices(phi_z_array,
                                     theta_xp_array,
                                     psi_zp_array)
-    SR, SRi = sim.generate_SR_matrices(phi_z_array,
+    SR, SRi = sim.generate_r_spin_matrices(phi_z_array,
                                        theta_xp_array,
                                        psi_zp_array)
     rotation_matrices = (r, ri, SR, SRi)
@@ -215,7 +215,7 @@ for isotope in isotope_list:
     r_init, ri_init = sim.generate_r_matrices(phi_z_init_i,
                                               theta_xp_init_i,
                                               psi_zp_init_i)
-    SR_init, SRi_init = sim.generate_SR_matrices(phi_z_init_i,
+    SR_init, SRi_init = sim.generate_r_spin_matrices(phi_z_init_i,
                                                  theta_xp_init_i,
                                                  psi_zp_init_i)
     rotation_matrices_init = (r_init, ri_init, SR_init, SRi_init)
@@ -228,7 +228,7 @@ for isotope in isotope_list:
                                    vb=vb_list[i],
                                    vc=vc_list[i],
                                    eta=eta_list[i],
-                                   rm_SRm_tuple=rotation_matrices,
+                                   rotation_matrices=rotation_matrices,
                                    rm_SRm_init_tuple=rotation_matrices_init,
                                    Hinta=Hinta_list[i],
                                    Hintb=Hintb_list[i],

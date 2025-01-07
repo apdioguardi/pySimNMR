@@ -227,7 +227,7 @@ elif sim_type=='exact diag':
         r, ri = sim.generate_r_matrices(phi_z_i,
                                         theta_xp_i,
                                         psi_zp_i)
-        SR, SRi = sim.generate_SR_matrices(phi_z_i,
+        SR, SRi = sim.generate_r_spin_matrices(phi_z_i,
                                            theta_xp_i,
                                            psi_zp_i)
         rotation_matrices = (r, ri, SR, SRi)
@@ -247,7 +247,7 @@ elif sim_type=='exact diag':
                                     vb=vb_list[i],
                                     vc=vc_list[i],
                                     eta=eta_list[i],
-                                    rm_SRm_tuple=rotation_matrices,
+                                    rotation_matrices=rotation_matrices,
                                     Hinta=Hinta_list[i],
                                     Hintb=Hintb_list[i],
                                     Hintc=Hintc_list[i],
