@@ -1,0 +1,175 @@
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 0.67109172
+    reduced chi-square = 6.7446e-04
+    Akaike info crit   = -7283.99353
+    Bayesian info crit = -7269.27627
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42606262 +/- 0.00340523 (0.80%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.0988758 +/- 0.00230762 (0.02%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47856723 +/- 0.00415863 (0.87%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5705[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 1.38780370
+    reduced chi-square = 0.00139478
+    Akaike info crit   = -6558.87479
+    Bayesian info crit = -6544.15753
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42311596 +/- 0.00486836 (1.15%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.1004620 +/- 0.00327838 (0.03%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47339121 +/- 0.00591397 (1.25%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5703[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 1.38780370
+    reduced chi-square = 0.00139478
+    Akaike info crit   = -6558.87479
+    Bayesian info crit = -6544.15753
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42311596 +/- 0.00486836 (1.15%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.1004620 +/- 0.00327838 (0.03%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47339121 +/- 0.00591397 (1.25%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5703[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 1.38780370
+    reduced chi-square = 0.00139478
+    Akaike info crit   = -6558.87479
+    Bayesian info crit = -6544.15753
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42311596 +/- 0.00486836 (1.15%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.1004620 +/- 0.00327838 (0.03%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47339121 +/- 0.00591397 (1.25%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5703[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 1.38780370
+    reduced chi-square = 0.00139478
+    Akaike info crit   = -6558.87479
+    Bayesian info crit = -6544.15753
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42311596 +/- 0.00486836 (1.15%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.1004620 +/- 0.00327838 (0.03%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47339121 +/- 0.00591397 (1.25%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5703[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 998
+    # variables        = 3
+    chi-square         = 1.38780370
+    reduced chi-square = 0.00139478
+    Akaike info crit   = -6558.87479
+    Bayesian info crit = -6544.15753
+[[Variables]]
+    H0:                   5 (fixed)
+    offset:               0 (fixed)
+    amplitude_75As_0:     0.42311596 +/- 0.00486836 (1.15%) (init = 0.9)
+    Ka_75As_0:            0 (fixed)
+    Kb_75As_0:            0 (fixed)
+    Kc_75As_0:            0 (fixed)
+    va_75As_0:           -inf (fixed)
+    vb_75As_0:           -inf (fixed)
+    vc_75As_0:            11.1004620 +/- 0.00327838 (0.03%) (init = 11)
+    eta_75As_0:           0 (fixed)
+    Hinta_75As_0:         0 (fixed)
+    Hintb_75As_0:         0 (fixed)
+    Hintc_75As_0:         0 (fixed)
+    phi_z_deg_75As_0:     0 (fixed)
+    theta_xp_deg_75As_0:  0 (fixed)
+    psi_zp_deg_75As_0:    0 (fixed)
+    FWHM_75As_0:          0.47339121 +/- 0.00591397 (1.25%) (init = 0.3)
+    FWHM_vQ_75As_0:       0.1 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(amplitude_75As_0, FWHM_75As_0) = +0.5703

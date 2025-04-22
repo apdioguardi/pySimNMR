@@ -7,6 +7,14 @@ Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
 ###############################################################################
 ###############################################################################
 
+v0.15.5
+- started to add functionality for partially aligned powder patterns
+- started to add ability to produce spectra with a distribution of internal hyperfine
+  fields (untracked_files/development/plot_freq_spectrum_multisite_Hint_dist.py)
+- need to finish debugging the updated exact diag fitting multisite field spec, 
+  currently untracked and not ready for deployment (untracked_files/development/
+  fit_freq_spectrum_multisite_exact_diag.py)
+
 v0.15.4
 - added a new method to calculate and save rotation matrices for exact diagonalization
   powder patter simulation

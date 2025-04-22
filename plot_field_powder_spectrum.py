@@ -44,7 +44,7 @@ Hintc_list = [0]
 f0 = 34.75        # observed frequency (units = MHz)
 
 ##----Simulation control-------------------------------------------------------
-sim_type = 'exact diag' #'2nd order'        # currently the only option is '2nd order', exact diag in devel
+sim_type = 'exact diag' # '2nd order'        # '2nd order' or 'exact diag'
 min_field = 2.85                 # units = T
 max_field = 3.25               # units = T
 n_field_points = 250            # number of points on the x (field) axis

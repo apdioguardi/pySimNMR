@@ -40,16 +40,21 @@ import os
 
 ##----NMR Parameters-----------------------------------------------------------
 n = 1 #number of sites, to make testing easier (lists can be multiplied by an integer n, giving a list with n identical elements)
-isotope_list = ['73Ge']
+isotope_list = ['75As']*n
 site_multiplicity_list = [1]*n  # scales individual relative intensities
 Ka_list = [0]*n                # shift tensor elements (units = percent)
 Kb_list = [0]*n
 Kc_list = [0]*n
 va_list = [None]*n  # only functions with exact diag; two modes: va and vb=None and eta=number OR 
 vb_list = [None]*n  # only functions with exact diag; va and vb=numbers and eta=None (be sure to satisfy va+vb+vc=0)
-vc_list = [1.617]*n     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
-eta_list = [0.365]*n  # asymmetry parameter (unitless)
-H0 = 0.05         # magnetic field  (units = T)
+vc_list = [11.1]     # units = MHz (note, in this simulation software princ axes of efg and shift tensors are fixed to be coincident.
+eta_list = [0]  # asymmetry parameter (unitless)
+
+# comment out two below and uncomment vc_list above for standard description, but the definitions based on vQ are often used in the literature so added this for convenience
+#vQ_list = [35.0, 36]
+#vc_list = [np.round(vQ/np.sqrt(1 - eta**2/3), 3) for vQ, eta in zip(vQ_list, eta_list)] 
+
+H0 = 5         # magnetic field  (units = T)
 Hint_list = [[0, 0, 0]]*n  # internal field in a direction (units = T) only taken into account in exact diag
 
 #----2nd-order-specific inputs-------------------------------------------------
@@ -59,7 +64,7 @@ theta_deg_list = [0]*n
 #----exact diag specific inputs------------------------------------------------
 matrix_element_cutoff = 0.5                     # minimum allowed value for the probability of the transition (arbitrary units). Increase to remove forbidden transitions.
 phi_z_deg_list =         [0]*n           # Range: (0-360) ZXZ Euler angles phi, theta, and psi for rotation of the EFG + K tensors with respect to H0
-theta_x_prime_deg_list = [33]*n # Range: (0-180) these values are in degrees and converted to radians in the code
+theta_x_prime_deg_list = [0]*n # Range: (0-180) these values are in degrees and converted to radians in the code
 psi_z_prime_deg_list =   [0]*n    # Range: (0-360)
 
 ##----Simulation control-------------------------------------------------------
@@ -69,12 +74,12 @@ psi_z_prime_deg_list =   [0]*n    # Range: (0-360)
 sim_type = 'exact diag'
 #sim_type = '2nd order'
 
-min_freq = None      # units = MHz
-max_freq = None     # units = MHz
+min_freq = 20      # units = MHz
+max_freq = 55     # units = MHz
 n_freq_points = 1e3                    # number of bins for the histogram
 convolution_function_list = ['gauss']*n   # 'gauss' and 'lor' are implemented
-conv_FWHM_list = [0.05]*n      # Gaussian or Lorentzian of FWHM conv_FWHM (units = MHz)
-conv_vQ_FWHM_list = [1e-6]*n    # Gaussian or Lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
+conv_FWHM_list = [0.4]*n      # Gaussian or Lorentzian of FWHM conv_FWHM (units = MHz)
+conv_vQ_FWHM_list = [1e-1]*n    # Gaussian or Lorentzian FWHM which is scaled by transition number for broadening caused by distribution of EFG values (units = MHz)
 
 ##----Background control-------------------------------------------------------
 bgd = [0]   #[0] = no background
@@ -84,13 +89,14 @@ bgd = [0]   #[0] = no background
 
 ##----Plotting data from data File---------------------------------------------
 #cwd=os.getcwd()
-#exp_data_file = 'D:\\Adam\\Seafile\\ifw\\data\\LiFeAs\\toyoda_2018_LiFeAs_75As_180K_H0parFeFe_spec.txt'   # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
-exp_data_file=''
+exp_data_file='' # if you want to plot data also, enter the path to the file here, otherwise write datafile=''; first column is interpreted as frequency (MHz), second as intensity
 number_of_header_lines = 0                # number of lines which are ignored in the begining of the data file
-exp_data_delimiter = ' '                 # tell numpy which delimter your experimental data file has 
+exp_data_delimiter = ','                 # tell numpy which delimter your experimental data file has 
 missing_values_string = 'nan'
-exp_x_scaling = 1                     # to scale the experimental data to MHz if units don't match
+exp_x_scaling = 1                     # multipliers and offsets to scale the experimental data, eg to MHz if units don't match, or offset if digitized data needs to be modified
 exp_y_scaling = 1
+exp_x_offset = 0
+exp_y_offset = -0.8
 
 ##----Plot control-------------------------------------------------------------
 plot_individual_bool = True
@@ -102,7 +108,7 @@ y_low_limit = 0
 y_high_limit = 1.1
 
 ##----Exporting Simulated Spectrum---------------------------------------------
-sim_export_file=''    # if you want to export your simulation, enter the path to the file here, otherwise write exportfile = ''
+sim_export_file='fit_test_75As_vc=11p1MHz_H=5T_f=20-55MHz_FWHM=0p4MHz_vQFWHM=0p1MHz.txt'    # if you want to export your simulation, enter the path to the file here, otherwise write exportfile = ''
 
 ###############################################################################
 ###############################################################################
@@ -172,7 +178,7 @@ if sim_type=='2nd order':
         gamma = sim.isotope_data_dict[isotope]["gamma"]
         gamma_list.append(gamma)
         I0 = sim.isotope_data_dict[isotope]["I0"]
-        print('I0', I0 )
+        
         sim_export_file_single = sim_export_file + '_' + isotope + '_' + str(i)
 
         #######################################
@@ -224,11 +230,8 @@ elif sim_type=='exact diag':
     spec_ind_list = []
     gamma_list=[]
     spec_ind_name_list=[]
-    # create freq array at which to simulate spectrum
-    if min_freq is None or max_freq is None: 
-        x = None
-    else:
-        x = np.linspace(min_freq, max_freq, n_freq_points)
+    # create freq array over which to simulate the spectrum
+    x = np.linspace(min_freq, max_freq, n_freq_points)
 
     for isotope in isotope_list:
         # instantiate the simulation class
@@ -250,9 +253,7 @@ elif sim_type=='exact diag':
         #######################################
         t0 = time.time()
         ###################
-        sim_x, spec = sim.freq_spec_ed_mix(
-                                           x=x,
-                                           n_freq_points=n_freq_points,
+        sim_x, spec = sim.freq_spec_ed_mix(x=x,
                                            H0=H0,
                                            Ka=Ka_list[i], 
                                            Kb=Kb_list[i], 
@@ -286,15 +287,15 @@ fig, (ax, lax) = plt.subplots(ncols=2, gridspec_kw={"width_ratios":plot_legend_w
 
 # load experimental data for comparison
 if exp_data_file != '':
-    print('plotting experimental data for comparison')
+    print(f'plotting experimental data for comparison from {exp_data_file}')
     exp_data = np.genfromtxt(fname=exp_data_file, 
                              delimiter=exp_data_delimiter, 
                              skip_header=number_of_header_lines, 
                              missing_values=missing_values_string)
-    exp_x = exp_data[:, 0]*exp_x_scaling
+    exp_x = exp_data[:, 0]*exp_x_scaling + exp_x_offset
     exp_y = exp_data[:, 1]
     # normalize
-    exp_y=exp_y_scaling*exp_y/np.nanmax(exp_y)
+    exp_y=exp_y_scaling*exp_y/np.nanmax(exp_y) + exp_y_offset
     # plot experimental data first as black lines
     ax.plot(exp_x, exp_y, "k-")
 # prepare simulation data for plotting
@@ -336,10 +337,11 @@ if save_files_bool:
 
 # plot and save individual spectra if there are more than one
 if len(spec_ind_list)>1:
+    #print(f'spec_ind_list = {spec_ind_list}')
     for n in range(len(spec_ind_list)):
         if plot_individual_bool:
-            ax.fill(spec_ind_list[n][:, 0], 
-                    spec_ind_list[n][:, 1]/max_sum_value, 
+            ax.fill(sim_x, #spec_ind_list[n][:, 0], 
+                    spec_ind_list[n]/max_sum_value, #[:, 1]/max_sum_value, 
                     label=spec_ind_name_list[n],
                     linewidth=2,
                     alpha=0.4)

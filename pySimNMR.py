@@ -9,6 +9,12 @@ import h5py
 from isotopeDict import isotope_data_dict
 from joblib import Parallel, delayed
 
+import plotly.graph_objects as go
+from scipy.stats import norm, uniform
+
+from lmfit.parameter import Parameter as lmfit_Parameter
+
+
 
 class SimNMR(object):
     def __init__(self, isotope):
@@ -282,11 +288,13 @@ class SimNMR(object):
                                 [0, 0, Kc/100.0]])
         Ktensor = r@KtensorInit@ri
         ## Zeeman Hamiltonian
-        if type(H0)==float:
+        if type(H0) is float:
             H0_array = np.array([H0])
-        elif type(H0)==list:
+        elif type(H0) is list:
             H0_array = np.array(H0)
-        elif type(H0)==np.ndarray:
+        elif type(H0) is lmfit_Parameter:
+            H0_array = np.array([H0.value]) # in case of fitting with lmfit
+        elif type(H0) is np.ndarray:
             pass
         else:
             print('H0 has type =', type(H0), 'please enter H0 as a valid float, list of floats, or numpy array')
@@ -706,6 +714,108 @@ class SimNMR(object):
         return rotation_matrix_dict
 
 
+    def generate_r_theta_phi_pdf_vectors(self, n, theta_pdf, phi_pdf, r_pdf=None):
+        """
+        Generate an array of vectors on the sphere with arbitrary probability distributions over theta and phi.
+
+        Parameters:
+        - n (int): Number of vectors to generate.
+        - theta_pdf (callable): Function that samples from the desired probability distribution of theta.
+        - phi_pdf (callable): Function that samples from the desired probability distribution of phi.
+        - r_pdf (callable): Function that samples from the desired probability distribution of r, vector lengths. default is unit sphere
+
+        Returns:
+        - numpy.ndarray: An (n, 3) array of unit vectors.
+        """
+        theta_samples = theta_pdf(n)  # Theta is in [0, pi]
+        phi_samples = phi_pdf(n)      # Phi is in [0, 2*pi]
+        if r_pdf is None:
+            r_samples = 1
+        else:
+            r_samples = r_pdf(n)
+
+        x = r_samples*np.sin(theta_samples) * np.cos(phi_samples)
+        y = r_samples*np.sin(theta_samples) * np.sin(phi_samples)
+        z = r_samples*np.cos(theta_samples)
+
+        return np.column_stack((x, y, z))
+
+
+    # Function for Gaussian-distributed theta around the equator
+    def pdf_gaussian_theta(self, n, mu=np.pi/2, sigma=np.pi/20):
+        """
+        Generate theta values following a Gaussian distribution centered at the equator (theta = pi/2).
+
+        Parameters:
+        - n (int): Number of samples.
+        - mu (float): Mean of the Gaussian (default: equator, pi/2).
+        - sigma (float): Standard deviation of the Gaussian (default: pi/8).
+
+        Returns:
+        - numpy.ndarray: Array of theta values distributed around the equator.
+        """
+        theta_samples = norm.rvs(loc=mu, scale=sigma, size=n)  # Sample from normal distribution
+
+        # Reflect values that go out of bounds (ensures symmetry)
+        theta_samples = np.abs(theta_samples)  # Reflect negative values (if any)
+        theta_samples[theta_samples > np.pi] = 2 * np.pi - theta_samples[theta_samples > np.pi]  # Reflect above pi
+
+        return theta_samples
+
+
+    # Function for uniform phi distribution
+    def pdf_uniform_phi(self, n):
+        return 2 * np.pi * uniform.rvs(size=n)
+    
+
+    def gaussian_r(n, mu=1, sigma=1/10.):
+        r_samples = norm.rvs(loc=mu, scale=sigma, size=n)
+        return r_samples
+
+
+    def plot_unit_sphere_scatter_vectors(self, vectors):
+        # Extract x, y, z coordinates
+        x, y, z = vectors[:, 0], vectors[:, 1], vectors[:, 2]
+
+        # Create scatter plot of points on the sphere
+        scatter = go.Scatter3d(
+            x=x, y=y, z=z,
+            mode='markers',
+            marker=dict(size=2, opacity=0.5, color='blue')
+        )
+
+        # Create a transparent surface sphere
+        u = np.linspace(0, 2 * np.pi, 50)
+        v = np.linspace(0, np.pi, 50)
+        U, V = np.meshgrid(u, v)
+        X = np.cos(U) * np.sin(V)
+        Y = np.sin(U) * np.sin(V)
+        Z = np.cos(V)
+
+        sphere_surface = go.Surface(
+            x=X, y=Y, z=Z,
+            colorscale=[[0, "lightgray"], [1, "lightgray"]],  # Single color
+            opacity=0.2,  # Adjust transparency
+            showscale=False
+        )
+
+        # Create layout
+        layout = go.Layout(
+            title="Gaussian-Distributed Vectors around Equator",
+            scene=dict(
+                xaxis=dict(title='X'),
+                yaxis=dict(title='Y'),
+                zaxis=dict(title='Z'),
+                aspectmode='data',
+            ),
+            margin=dict(l=0, r=0, b=0, t=40)
+        )
+
+        # Create figure and show it
+        fig = go.Figure(data=[scatter, sphere_surface], layout=layout)
+        fig.show()
+
+
     def freq_prob_trans_ed(self,
                            H0,
                            Ka,
@@ -979,7 +1089,6 @@ class SimNMR(object):
 
     def freq_spec_ed_mix(self,
                          x,
-                         n_freq_points,
                          H0,
                          Ka,
                          Kb,
@@ -1001,8 +1110,7 @@ class SimNMR(object):
         args:
             - x is expected to be a numpy array of dimension 0 containing 
                 frequency values at which the spectrum should be calculated 
-                in units of MHz, if x is none, then the spectral range is 
-                automatically detected
+                in units of MHz
             - H0 applied external field
             - Ka, Kb, and Kc are the components of the shift tensor in percent
             - vc and eta are the quadrupole parameters of the EFG tensor in MHz
@@ -1060,25 +1168,14 @@ class SimNMR(object):
         freq_array = exact_diag_output['frequency']
         prob_array = exact_diag_output['probability']
         parent_state_1 = exact_diag_output['parent_state_1']
-        #print('freq_spec_ed_mix; freq_array =', freq_array)    
-        #print('freq_spec_ed_mix; prob_array =', prob_array)    
-        #print('freq_spec_ed_mix; parent_state_1 =', parent_state_1)
 
         trans_array = parent_state_1 + 0.5
         # need to loop through the transitions and set their appropriate linwidths,
         # then can calculate the individual spectra using the gaussian or lorentzian
         # functions with properly scaled FWHM (so magnetic for all plus FWHM_dvQ_MHz*float(trans))
-        if x is None:
-            baseline = max(1, 2*FWHM + 2*trans_array.max()*FWHM_vQ)
-            #print('baseline', baseline)
-            x = np.linspace(freq_array.min() - baseline, 
-                            freq_array.max() + baseline, 
-                            n_freq_points)
-            summed_spectrum = np.zeros(shape=x.shape)
-        else: 
-            summed_spectrum = np.zeros(shape=x.shape)
+        summed_spectrum = np.zeros(shape=x.shape)
         for i in range(freq_array.shape[0]):
-            if trans_array[i] == 0:
+            if trans_array[i]==0:
                 FWHM_total = FWHM
             else:
                 FWHM_total = FWHM + FWHM_vQ*abs(float(trans_array[i])) # note this might break down for eta != 0
