@@ -1,2 +1,39 @@
-/untracked_files
-/__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+
+# Build / packaging
+*.egg-info/
+dist/
+build/
+
+# pytest
+.pytest_tmp/
+.pytest_cache/
+
+# Test outputs
+tests/artifacts/
+tests/generated_data/
+tests/**/*.png
+tests/**/*.svg
+
+# Simulation output
+output/
+
+# LaTeX build artifacts
+doc/*.aux
+doc/*.bbl
+doc/*.blg
+doc/*.fdb_latexmk
+doc/*.fls
+doc/*.log
+doc/*.out
+doc/*.toc
+
+# Project-local files (not for public repo)
+TODO.md
+ai_prompts

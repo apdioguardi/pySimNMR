@@ -1,0 +1,32 @@
+"""Single-site config for `nmr-freq` smoke tests."""
+
+CONFIG = {
+    'isotope_list': ['75As'],
+    'site_multiplicity_list': [1.0],
+    'Ka_list': [0.0],
+    'Kb_list': [0.0],
+    'Kc_list': [0.0],
+    'vc_list': [11.0],
+    'eta_list': [0.0],
+    'Hint_list': [
+        {'x': 0.0, 'y': 0.0, 'z': 0.0},
+    ],
+    'phi_z_deg_list': [0.0],
+    'theta_x_prime_deg_list': [0.0],
+    'psi_z_prime_deg_list': [0.0],
+    'H0': 5.0,
+    'sim_type': 'exact diag',
+    'min_freq': 20.0,
+    'max_freq': 45.0,
+    'n_freq_points': 256,
+    'convolution_function_list': ['gauss'],
+    'conv_FWHM_list': [0.5],
+    'conv_vQ_FWHM_list': [0.1],
+    'matrix_element_cutoff': 0.25,
+    'plot_individual_bool': False,
+    'plot_sum_bool': True,
+    'plot_legend_width_ratio': [3.25, 1.0],
+    'x_axis_min': 20.0,
+    'x_axis_max': 45.0,
+    'sim_export_file': '',
+}

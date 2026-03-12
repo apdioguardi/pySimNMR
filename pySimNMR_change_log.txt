@@ -7,6 +7,170 @@ Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
 ###############################################################################
 ###############################################################################
 
+v1.0.15 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotly-only renderer
+  - Removed the legacy fallback renderer and plot-backend plumbing now that every CLI uses the shared Plotly helpers (with kaleido for static exports). Docs/tests/packaging now focus solely on the Plotly stack.
+  - Simplified the vary CLI, sitecustomize, and README to reflect the Plotly-first workflow.
+- Progress reporting
+  - Powder field simulations now stream solver progress: exact-diagonalisation batches update live via joblib hooks and perturbative runs accumulate histograms in chunks, which keeps the CLI progress bar moving smoothly even for long jobs (backed by regression tests).
+- Plotly figures
+  - Every spectrum CLI now renders configuration parameters in Plotly tables (per-isotope table + global settings table) with isotope superscripts, alongside a files table that lists config/experimental/export paths. The layout keeps the parameter tables on the right and the files table below the spectrum so nothing is clipped.
+- Powder field inputs
+  - `nmr-field-powder` now accepts full EFG tensors (`va_list`/`vb_list`/`vc_list`) without requiring `eta_list`; the config layer derives missing `vc`/`eta` entries per site and passes `va`/`vb` down to the ED solver. Regression tests cover the tensor-derived paths and the validation errors when insufficient inputs are provided.
+- Bug fixes
+  - Restored the per-site/global parameter tables inside the Plotly figure canvas (not just the HTML footer) so `nmr-field-powder`, `nmr-field-spec`, and the other CLIs again show the configuration context alongside the spectrum, with a regression test exercising the renderer. The tables now live in the right column while the files table spans the bottom row to prevent clipping.
+  - Added a dedicated "Files" table to the Plotly layout with monospace, soft-wrapped paths (via zero-width break markers and wider column widths) so config, experimental, export, figure, and HTML report paths show entirely inside the figure; the CLIs/fits now report their resolved config path in that block.
+  - Plotly static image exports now catch kaleido `TimeoutError`s; when PNG output is requested we emit a placeholder PNG and a warning instead of crashing the CLI, so long simulations finish even if kaleido flakes out.
+
+v1.0.14 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotting backend upgrade (field fit + powder fitters)
+  - `nmr-field-fit`, `nmr-freq-powder-fit`, and `nmr-field-powder-fit` now use the same Plotly renderer and overlay support as the simulation CLIs, keeping experimental curves/initial guesses in sync.
+- Vary CLI modernization
+  - `nmr-field`, `nmr-elevels`, `nmr-vary-eta`, and `nmr-vary-angle` now route through the shared line-plot helper, producing Plotly HTML/PNG outputs (plus `.txt` exports).
+
+v1.0.13 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotting backend upgrade (freq fit)
+  - `nmr-freq-fit` now reuses the shared Plotly renderer (including initial-guess overlays) so fitting runs emit interactive HTML plus static images alongside the `.txt` exports, with matching regression tests.
+
+v1.0.12 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotting backend upgrade (simulation CLIs)
+  - Added shared rendering helpers (`save_spectrum_plot`) so the field/frequency/powder CLIs emit Plotly HTML/static images alongside their `.txt` exports, including regression tests for each command.
+
+v1.0.11 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotting backend upgrade
+  - `SingleCrystalFreqConfig` and `nmr-freq` adopted the shared Plotly renderer, unlocking interactive HTML plus static exports for multisite frequency sweeps with matching CLI tests.
+
+v1.0.10 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Plotly transition (phase 1)
+  - Added `pysimnmr/plotting.py` with a shared `SpectrumPlotData` model plus helpers to render/save Plotly figures (including HTML exports and static PNG/SVG/PDF via kaleido).
+  - Migrated `pysimnmr/freq_cli.py` to use the new Plotly renderer so multisite frequency spectra now produce interactive HTML and Plotly-backed static images.
+  - Declared `kaleido>=0.2.1` as a runtime dependency to support Plotly static exports and kept the CLI `--fig-format/--no-show` semantics intact.
+
+v1.0.9 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Rotation cache tidy-up
+  - rotation_matrices.h5 now lives under the `output/` directory (or `PYSIMNMR_ROTATION_CACHE`) so generated orientation caches no longer clutter the project root.
+  - Added auto-migration for legacy caches plus messaging when regenerating so users know where the file is written.
+- Tests
+  - Added `tests/test_rotation_cache.py` to verify the cache is created in the configured output directory and reused on subsequent runs.
+
+v1.0.8 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Packaging cleanup
+  - Moved `isotopeDict.py` into `pysimnmr/isotopeDict.py` so the isotope metadata ships within the package namespace.
+  - Updated every import site and smoke-tested `SimNMR('1H')` to confirm the dictionary is still discoverable.
+  - Bumped `pyproject.toml` to v1.0.8 and removed the obsolete top-level `isotopeDict` module from `py-modules`.
+- Documentation
+  - Refreshed README overlay and the manual to point at the new dictionary location.
+- Housekeeping
+  - Synced TODO.md with the executed plan so future sessions retain the context.
+
+v1.0.7 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Config modernization
+  - Converted the hyperfine example configs to Python modules (`examples/hyperfine_distribution_xy_plane.py` and `hyperfine_uniform_xy_plane_73Ge.py`).
+  - `load_hyperfine_config` now accepts `.py` CONFIG modules in addition to YAML.
+  - Updated README/manual/internal-field helper to reference the Python configs.
+- Reference examples
+  - Ported every historical CONFIG into commented Python modules under `examples/reference/` (multisite, powder, and fitter variants) and deleted the outdated `examples/legacy/` folder.
+  - Updated README + manual to reference the new paths (including a JSON example at `examples/reference/multisite/freq_spectrum.json`) so only the modern commands/configs are documented.
+- Legacy cleanup
+  - Removed the `legacy_scripts/` package (and associated tests), completing the migration to the new CLIs.
+- CLI renaming
+  - Introduced `nmr-field`, `nmr-elevels`, `nmr-vary-eta`, and `nmr-vary-angle` entry points; `nmr-sweep` now calls into `pysimnmr.vary_cli:legacy_main` with a deprecation warning.
+  - Renamed `pysimnmr/analysis_sweeps.py` to `pysimnmr/vary_helpers.py`, `sweeps_cli.py` to `vary_cli.py`, and refreshed README/manual docs with the new field/freq/vary grid.
+  - Updated pytest markers/config to `vary`, renamed `tests/test_cli_sweeps.py` to `tests/test_cli_vary.py`, and kept the module runnable via `python -m pysimnmr.vary_cli` for backward compatibility.
+  - Added `pysimnmr/freq_simulation.py` plus the `nmr-freq` CLI (with pytest coverage) to supersede `nmr-plot-freq-spectrum-multisite`.
+  - Added `pysimnmr/freq_fit.py` and the `nmr-freq-fit` CLI, reusing the shared simulation helper for lmfit-based frequency fitting with smoke tests and a commented example config.
+  - Added `pysimnmr/field_simulation.py` plus the `nmr-field-spec` CLI (with pytest coverage) to replace `nmr-plot-field-spectrum-multisite` for simulation.
+  - Added `pysimnmr/field_fit.py` and the `nmr-field-fit` CLI, including tests and example configs for field-spectrum fitting.
+  - Introduced `pysimnmr/powder_freq_simulation.py` and the `nmr-freq-powder` CLI so powder spectra no longer require the legacy script; includes a lightweight example and smoke test.
+  - Added `pysimnmr/powder_freq_fit.py` and the `nmr-freq-powder-fit` CLI with example configs/tests to replace `fit_freq_powder_spectrum_devel.py`.
+  - Added `pysimnmr/powder_field_simulation.py` + `powder_field_cli.py` (`nmr-field-powder`) and `pysimnmr/powder_field_fit.py` (`nmr-field-powder-fit`) to modernize field-swept powder workflows.
+- Legacy shims
+  - Removed the deprecated console aliases entirely; the packaging metadata now exposes only the modern CLIs (`nmr-field`, `nmr-freq`, powder CLIs, and fitters), and the `pysimnmr.legacy_entrypoints` module was deleted.
+- Tests
+  - Added a regression test ensuring Python hyperfine configs load correctly.
+  - Added `tests/test_cli_freq.py` to smoke-test the new `nmr-freq` command.
+  - Added `tests/test_cli_freq_fit.py` to smoke-test the fitting CLI.
+  - Added `tests/test_cli_field_spec.py` to cover the field-spectrum CLI.
+  - Added `tests/test_cli_field_fit.py` to cover the field-spectrum fitting CLI.
+  - Added `tests/test_cli_freq_powder.py` to cover the powder frequency CLI.
+  - Added `tests/test_cli_freq_powder_fit.py` to cover the powder frequency fitting CLI.
+  - Added `tests/test_cli_field_powder.py` / `tests/test_cli_field_powder_fit.py` to cover the powder field simulation/fitting CLIs.
+
+v1.0.6 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Config modernization
+  - Converted `examples/elevels_vs_field.yaml` and `examples/freq_vs_angle.yaml` into Python CONFIG modules.
+  - README and CLI docs now reference the Python configs for level and angle sweeps.
+- Tests
+  - Added `nmr-sweep elevels-vs-field` and `freq-vs-angle` smoke tests so both examples stay exercised.
+
+v1.0.5 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Config modernization
+  - Converted `examples/freq_vs_eta.yaml` into `examples/freq_vs_eta.py` with a Python `CONFIG` dict.
+  - Added a `nmr-sweep freq-vs-eta` smoke test so the example stays exercised.
+- CLI docs/tests
+  - README now references the Python config for the eta sweep.
+
+v1.0.4 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Config modernization
+  - Converted `examples/freq_vs_field.yaml` into `examples/freq_vs_field.py` with a Python `CONFIG` dict.
+  - Updated docs/manual/tests to reference the Python config and note the ongoing migration.
+- CLI support
+  - `nmr-sweep` now loads `.py` config modules via `load_python_config` alongside YAML/JSON.
+
+v1.0.3 - 2025-10-07 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Powder simulations
+  - Added `freq_spectrum_from_internal_field_distribution` to assemble frequency-swept spectra
+    from sampled internal field vectors with probability weighting.
+  - Internal PAS orientations can vary per sample via Euler stacks; weights auto-normalize.
+- Visualization
+  - New Plotly helper `save_internal_field_distribution_html` creates interactive 3D scatter plots of sampled internal field vectors colored by weight.
+- Tests and docs
+  - Added unit tests covering the weighted spectrum helper and Plotly export.
+  - Documented the workflow in README and the LaTeX manual.
+  - Added `examples/internal_field_powder_xy_plane.py` showcasing 75As internal-field sampling in the xy-plane.
+  - Added a zero-field regression test and moved the powder helper onto `freq_spec_ed_mix` (exact diagonalisation) so we no longer depend on legacy `freq_prob_trans_ed`.
+  - Renamed the helper module to `hyperfine_distribution` and updated docs/tests to match.
+  - Introduced YAML-driven runs via the new `nmr-hyperfine` CLI, with explicit angle/magnitude probability distributions in `examples/hyperfine_distribution_xy_plane.yaml`.
+  - Opt-in custom vector generators (`allow_custom_generators: true`) enable importing user-defined sampling functions via YAML.
+  - CLI subcommands shortened (e.g. `freq-vs-field` instead of `freq-vs-field-sweep`) with matching config filenames.
+  - Legacy angle/eta utilities (`plot_freq_vs_eta`, `plot_freq_vs_angle`, and `fit_freq_vs_angle`) now call `SimNMR.exact_diag` directly instead of the deprecated `freq_prob_trans_ed` helpers.
+  - Fixed `field_spec_edpp` to use the existing parallel ED frequency finder and added a smoke test for `legacy_scripts.plot_field_spectrum_multisite` to cover the field-swept multisite flow.
+  - Added Pydantic-backed schema validation for `nmr-sweep` configs (freq-vs-field/eta/angle/levels) with pytest coverage for invalid files.
+  - Confirmed all legacy plotting/fitting scripts honor `--config` overrides and updated TODO to reflect completion.
+  - `fit_freq_powder_spectrum_devel` now honors the `sim_type` toggle (exact diag vs 2nd order) with shared docs/tests showing how `n_samples` drives both ED orientation caches and perturbative powder runs.
+  - Harmonized CLI/YAML parameter names: `nmr-sweep` and `nmr-hyperfine` now accept canonical fields (`B*_T`, `vQ_MHz`, `phi/theta/psi`, etc.) while auto-mapping legacy aliases (`min_field`, `vc`, `phi_z_deg`, `H0`, `Hinta/b/c`).
+  - Comment pass: documented why the ED sweeps pad/sort transition grids, how internal fields are normalized in `exact_diag`, and why powder CLIs reuse a shared orientation pool for coherence.
+
+v1.0.1 - 2025-09-03 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- test acceleration and headless stability
+  - Added sitecustomize to force the Agg backend under pytest and seed the plotting
+    font cache to avoid repeated font scans.
+  - Preferred thread-based joblib execution in sandbox/tests to avoid process
+    spawn issues; falls back to processes outside tests.
+- CLI quality of life
+  - Early `--config` parsing and `--no-show` handling across legacy scripts;
+    fixed `--save-fig` so figures are always written in headless mode.
+  - Robust experimental data file resolution (works when CWD is `testing_data`).
+  - Made plotting of experimental data optional in field powder spectrum CLI
+    to prevent FileNotFoundError during tests.
+- Bug fixes
+  - plot_freq_spectrum_multisite: fixed 1D/2D indexing for individual spectra
+    export; guarded normalization from divide-by-zero.
+  - fit_freq_powder_spectrum_devel: provision rotation matrices in-memory
+    and added a fast path for tests; guarded fit-report writing in quick mode.
+- Package version exposed as `pysimnmr.__version__` and documented versioning
+  policy in README.
+
+v1.0.2 - 2025-09-03 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Removed repository `testing_data/` (tests now generate datasets deterministically
+  and optionally persist them under `tests/generated_data`).
+- Updated example configs to avoid hard-coded `testing_data/` paths; users should
+  set `exp_data_file` to their own data files.
+- Added verbose test artifacts flow (`--verbose-plots`, `--artifacts-dir`) so plots
+  and data are saved for inspection.
+- Maintained full test pass; no runtime API changes.
+
+
 v0.15.5
 - started to add functionality for partially aligned powder patterns
 - started to add ability to produce spectra with a distribution of internal hyperfine
@@ -114,7 +278,7 @@ v0.11 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     in the development folder for further details
 - cleaned up some of the code to follow pep8 better. still need to do more...
 - modified the multi-site plotting to make things easier to visualize by
-    using 'fill' with an alpha value (transparency) instead of 'plot' in pyplot
+    using 'fill' with an alpha value (transparency) instead of the basic line plot helper
 - replaced numpy.loadtxt with numpy.genfromtxt for better handling of missing
     values
 

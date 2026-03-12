@@ -1,0 +1,520 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pySimNMR Manual (User + Methods)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt]{article}
+
+% Layout and math
+\usepackage{fullpage}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage{braket}
+\usepackage{bbm}
+
+% Hyperlinks and references
+\usepackage[sort&compress,numbers]{natbib}
+\bibliographystyle{apsrev4-2}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+% Code listings for CLI examples/snippets
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true}
+
+\title{pySimNMR: User Manual and Methods}
+\author{A. P. Dioguardi and collaborators}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+pySimNMR simulates solid-state NMR spectra using exact diagonalization (ED) of the nuclear spin Hamiltonian with optional second-order perturbation expressions when valid. The package supports single-crystal variations (field, angle, and parameter trends), powder patterns, multisite spectra, and basic fitting workflows. The ED core is vectorized to evaluate many Hamiltonians efficiently (e.g., powder orientations, variation grids) without Python loops.
+
+\section{Installation and Environment}
+Use a Python \(\ge\) 3.10 virtual environment so the CLIs match the tested toolchain.
+\begin{lstlisting}[language=bash]
+python3 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+# Windows PowerShell:
+#   py -m venv .venv
+#   .\.venv\Scripts\Activate.ps1
+# Windows Command Prompt:
+#   py -m venv .venv && .\.venv\Scripts\activate.bat
+#   python -m pip install --upgrade pip
+#   pip install -e .
+\end{lstlisting}
+
+\subsection{Beginner Setup Checklist}
+New users with minimal Python experience can follow this linear workflow:
+\begin{enumerate}
+  \item Install Python 3.10+ from \href{https://www.python.org/downloads/}{python.org}, enabling the ``Add Python to PATH'' option on Windows.
+  \item Download the pySimNMR source (clone via \texttt{git clone <repo>} or extract the ZIP archive).
+  \item Open a terminal in the project root and create a virtual environment:
+\begin{lstlisting}[language=bash]
+python3 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+# Windows PowerShell:
+#   py -m venv .venv
+#   .\.venv\Scripts\Activate.ps1
+#   pip install --upgrade pip
+#   pip install -e .
+# Windows Command Prompt:
+#   py -m venv .venv && .\.venv\Scripts\activate.bat
+#   python -m pip install --upgrade pip
+#   pip install -e .
+\end{lstlisting}
+  \item Run a smoke test (no GUI) to confirm the install:
+\begin{lstlisting}[language=bash]
+nmr-freq-powder \
+  --config examples/freq_powder_modern.py \
+  --no-show --save-fig output/test_powder.png
+\end{lstlisting}
+The CLI prints progress and writes \texttt{output/test\_powder.png}. Repeat with any Python, YAML, or JSON config under \texttt{examples/} or \texttt{examples/reference/} to explore other workflows.
+\end{enumerate}
+
+\subsection{Test Configuration}
+Tests can be toggled with a YAML configuration file (default: \verb|tests/test_config.yaml|). Each key mirrors a CLI family; all entries default to \verb|true|:
+\begin{lstlisting}
+multisite:
+  single_isotopes: true
+  three_isotopes: true
+powder:
+  freq: true
+  field: true
+fit:
+  multisite: true
+  powder: true
+vary:
+  freq_vs_field: true
+  elevels_vs_field: true
+  freq_vs_eta: true
+  freq_vs_angle: true
+freq:
+  multisite_ed: true
+freq_fit:
+  multisite: true
+field_spec:
+  multisite: true
+field_fit:
+  multisite: true
+field_powder:
+  modern: true
+field_powder_fit:
+  modern: true
+freq_powder:
+  modern: true
+freq_powder_fit:
+  modern: true
+\end{lstlisting}
+Use \verb|--test-config| to point to a custom file:
+\begin{lstlisting}[language=bash]
+pytest --test-config path/to/my_test_config.yaml -q
+\end{lstlisting}
+
+
+\section{Command-Line Overview}
+The package exposes dedicated field/frequency/variation commands via console entry points.
+\begin{itemize}
+  \item Variations: \verb|nmr-field|, \verb|nmr-elevels|, \verb|nmr-vary-eta|, \verb|nmr-vary-angle|.
+\item Hyperfine powder builder: \verb|nmr-hyperfine --config examples/hyperfine_distribution_xy_plane.py --out output/hyperfine_xy|.
+  \item Multisite spectra and fits: \verb|nmr-freq|, \verb|nmr-field-spec|, \verb|nmr-freq-fit|, \verb|nmr-field-fit|, plus the powder CLIs (\verb|nmr-freq-powder|, \verb|nmr-field-powder|, and their fitters).
+  \item Headless: add \verb|--no-show| and/or \verb|--save-fig out.png| to any plotting command.
+\end{itemize}
+
+\section{Configuration and YAML Fields}
+This section summarizes the most common YAML fields used by the CLI tools. See commented examples under \verb|examples/| and \verb|examples/reference/|.
+
+\subsection{Configuration Formats (Python, YAML, or JSON)}
+All CLI entry points accept configuration files encoded as Python modules (preferred), YAML, or JSON. Python modules expose a top-level \verb|CONFIG| dictionary and are the recommended format because they support inline comments and expressions. YAML is used in some legacy examples because comments aid readability; JSON works identically. The repository contains a JSON example (\verb|examples/reference/multisite/freq_spectrum.json|) to illustrate this:
+\begin{lstlisting}[language=bash]
+nmr-freq \
+  --config examples/reference/multisite/freq_spectrum.json \
+  --no-show --save-fig output/multisite_freq_json.png
+\end{lstlisting}
+The JSON file mirrors the YAML variant line-for-line; choose whichever format best suits your tooling.
+
+\subsection{Single-Crystal Variations (\texttt{nmr-field}, \texttt{nmr-vary-*})}
+Common fields:
+\begin{itemize}
+  \item \textbf{isotope}: nucleus label, e.g. \verb|75As|.
+  \item \textbf{phi, theta, psi}: ZXZ Euler angles in radians (orientation of EFG and K relative to lab frame).
+  \item \textbf{Ka, Kb, Kc}: shift tensor principal values (percent).
+  \item \textbf{vQ\_MHz}, \textbf{eta}: quadrupole principal value (MHz) and asymmetry (unitless).
+  \item Field variations: \textbf{B\_min\_T}, \textbf{B\_max\_T}, \textbf{B\_points}, \textbf{B\_axis} (\verb|x|,\verb|y|,\verb|z|).
+  \item $\eta$ variations: \textbf{eta\_min}, \textbf{eta\_max}, \textbf{eta\_points}; fixed \textbf{B0\_T}.
+  \item Angle variations: \textbf{angle\_name} (\verb|phi|, \verb|theta|, \verb|psi|), range/points, and fixed values for the other two angles in degrees.
+\end{itemize}
+Older YAML names such as \verb|min_field|/\verb|max_field|, \verb|vc|, or \verb|phi_z_deg| are still accepted; the CLI normalizes them onto the canonical keys above so existing configs do not need to be rewritten.
+
+\subsection{Powder Spectra (Powder CLIs)}
+Common fields (lists are per-site):
+\begin{itemize}
+  \item \textbf{isotope\_list}, \textbf{site\_multiplicity\_list}.
+  \item \textbf{Ka\_list}, \textbf{Kb\_list}, \textbf{Kc\_list}; \textbf{vc\_list}, \textbf{eta\_list}.
+\item Frequency sweep: \textbf{H0} (Tesla), \textbf{min\_freq}, \textbf{max\_freq}, \textbf{n\_freq\_points}.
+\item Field sweep: \textbf{f0} (MHz), \textbf{min\_field}, \textbf{max\_field}, \textbf{n\_field\_points}.
+  \item Broadening: \textbf{convolution\_function\_list} (\verb|gauss| or \verb|lor|), \textbf{conv\_FWHM\_list}, \textbf{conv\_vQ\_FWHM\_list}.
+  \item ED control: \textbf{sim\_type} (\verb|exact diag| or \verb|2nd order|), \textbf{mtx\_elem\_min}, \textbf{recalc\_random\_samples}, \textbf{n\_samples}.
+\end{itemize}
+
+\subsection{Multisite Spectra}
+Fields mirror powder lists but for single-crystal orientations:
+\begin{itemize}
+  \item \textbf{isotope\_list}, \textbf{site\_multiplicity\_list}, \textbf{Ka/Kb/Kc\_list}, \textbf{vc\_list}, \textbf{eta\_list}.
+  \item \textbf{H0} (frequency sweep) or \textbf{f0} (field sweep).
+  \item Orientation per site: \textbf{phi\_z\_deg\_list}, \textbf{theta\_x\_prime\_deg\_list}, \textbf{psi\_z\_prime\_deg\_list}.
+  \item Broadening: \textbf{convolution\_function\_list}, \textbf{conv\_FWHM\_list}, \textbf{conv\_vQ\_FWHM\_list}.
+  \item ED control: \textbf{matrix\_element\_cutoff} (transition pruning).
+\end{itemize}
+
+\subsection{Fitting (Frequency-Swept, Multisite or Powder)}
+Parameter lists accept multiple forms: \verb|[const]| (fixed), \verb|[val, vary]| (free), \verb|[val, vary, min, max]| (bounded), or \verb|['expr']| (constrained equal). Common fields:
+\begin{itemize}
+  \item \textbf{H0} (list for fit), \textbf{amplitude\_list} (site weights).
+  \item \textbf{Ka/Kb/Kc}, \textbf{vc}, \textbf{eta} (lists of lists for fits).
+  \item \textbf{FWHM\_list}, \textbf{FWHM\_vQ\_list}, \textbf{line\_shape\_func\_list}.
+  \item ED control: \textbf{mtx\_elem\_min}.
+  \item Experimental data: \textbf{exp\_data\_file}, delimiter, header lines, scaling/offsets.
+\end{itemize}
+
+\section{Single-Crystal Simulations}
+Configure with Python modules that expose a top-level \verb|CONFIG| dict (or YAML/JSON if preferred; all reside under \verb|examples/|) and run:
+\begin{lstlisting}[language=bash]
+nmr-field --config examples/freq_vs_field.py --out output/freq_vs_field
+\end{lstlisting}
+Other variation commands follow the same pattern (levels vs field, \(\eta\) scans, angle scans). Configuration fields correspond to isotopes, Euler angles, shift tensor components \(K_{a,b,c}\), and quadrupole parameters \((\nu_Q,\eta)\).
+For full frequency-swept spectra at fixed \(H_0\), use:
+\begin{lstlisting}[language=bash]
+nmr-freq --config examples/reference/multisite/freq_spectrum.py --out output/freq_spectrum_multisite
+\end{lstlisting}
+When experimental data are available, the companion fitter leverages the same CONFIG style:
+\begin{lstlisting}[language=bash]
+nmr-freq-fit --config examples/freq_fit_multisite.py --out output/freq_fit_multisite --max-nfev 200
+\end{lstlisting}
+Field-swept multisite spectra are handled by:
+\begin{lstlisting}[language=bash]
+nmr-field-spec --config examples/reference/multisite/field_spectrum.py --out output/field_spectrum_multisite
+\end{lstlisting}
+with the companion fitter:
+\begin{lstlisting}[language=bash]
+nmr-field-fit --config examples/field_fit_multisite.py --out output/field_fit_multisite --max-nfev 200
+\end{lstlisting}
+Powder frequency spectra follow the same CONFIG style:
+\begin{lstlisting}[language=bash]
+nmr-freq-powder --config examples/freq_powder_modern.py --out output/freq_powder_modern
+\end{lstlisting}
+and the fitting counterpart:
+\begin{lstlisting}[language=bash]
+nmr-freq-powder-fit --config examples/freq_fit_powder_modern.py --out output/freq_powder_fit --max-nfev 200
+\end{lstlisting}
+Powder field spectra:
+\begin{lstlisting}[language=bash]
+nmr-field-powder --config examples/field_powder_modern.py --out output/field_powder_modern
+nmr-field-powder-fit --config examples/field_fit_powder_modern.py --out output/field_powder_fit --max-nfev 200
+\end{lstlisting}
+
+\section{Powder and Multisite Simulations}
+Powder spectra integrate over random orientations; ED mode uses vectorized rotation matrices cached on disk. Multisite tools sum site contributions with independent parameters (\(K\), \(\nu_Q\), \(\eta\), orientations, broadening). See commented examples in \verb|examples/reference/|.
+
+\section{Fitting Workflows}
+The CLI \verb|nmr-freq-fit| wraps lmfit to adjust amplitude/shift/EFG parameters against user-supplied data, and the field/powder fitters reuse the same patterns. Parameter lists accept fixed values, free parameters, bounded parameters, or constraints by name so every workflow behaves consistently.
+
+\section{Testing}
+We use smoke tests to exercise CLI entry points in headless mode and verify basic end-to-end behavior without validating physics-level results.
+\subsection{Prerequisites}
+\begin{itemize}
+  \item Install development dependencies: \verb|pytest| and \verb|pyyaml| (tests write and read YAML configs). Easiest: \verb|pip install -e '.[test]'| (quote the extras on zsh).
+\end{itemize}
+\subsection{Running}
+From the repository root:
+\begin{lstlisting}[language=bash]
+pytest -q                 # run all tests
+pytest -m "not slow" -q   # skip slower powder/fitting tests
+pytest -m vary -q         # only run nmr-field/nmr-vary-* CLI tests
+pytest -m freq -q         # run single-crystal frequency simulations
+pytest -m freq_fit -q     # run the frequency-spectrum fitting CLI tests
+pytest -m field_spec -q   # run the field-spectrum simulation CLI tests
+pytest -m field_fit -q    # run the field-spectrum fitting CLI tests
+make test                 # equivalent to `pytest -q`
+\end{lstlisting}
+\subsection{Conventions and Outputs}
+\begin{itemize}
+  \item Tests save figures under a per-test temporary directory, with descriptive names (e.g., \verb|multisite_freq_75As.png|, \verb|multisite_freq_59Co.png|).
+  \item Tests also direct any text exports (\verb|sim_export_file|) into the same temporary directory (e.g., \verb|multisite_freq_75As.txt|).
+  \item Tests run headlessly: \verb|--no-show| is always used, and \verb|--save-fig| names are explicit.
+  \item Minimal grids are used for speed (e.g., narrow frequency ranges and small histogram bins).
+\end{itemize}
+
+\section{Physics Background}
+
+\subsection{Zeeman Hamiltonian}
+\begin{equation}
+\mathcal{H}_Z = \gamma\,\hbar\,\vec{\mathbf{H}}_{\mathbf{0}}\cdot\hat{\mathbf{I}}\,.
+\end{equation}
+For \(\vec{\mathbf{H}}_{\mathbf{0}} = H_0\,\hat{z}\): \(\mathcal{H}_Z = \gamma\,\hbar\,H_0\,\hat{I}_z\).
+
+\subsection{Raising and Lowering Operators}
+\begin{equation}
+I^\pm = I_x \pm i I_y,\quad I_x = \tfrac{1}{2}(I^+ + I^-),\quad I_y = \tfrac{1}{2i}(I^+ - I^-)\,.
+\end{equation}
+See Slichter~\cite{Slichter:1996wo} for operator identities.
+
+\subsection{Spin Operators (I=3/2 example)}
+For illustration, the spin operators for \(I=\tfrac{3}{2}\) read
+\begin{equation}
+\hat{I}_z =
+\begin{pmatrix}
+ \tfrac{3}{2} & 0 & 0 & 0\\
+ 0 & \tfrac{1}{2} & 0 & 0\\
+ 0 & 0 & -\tfrac{1}{2} & 0\\
+ 0 & 0 & 0 & -\tfrac{3}{2}
+\end{pmatrix},\quad
+\hat{I}_x =
+\begin{pmatrix}
+ 0 & \tfrac{\sqrt{3}}{2} & 0 & 0\\
+ \tfrac{\sqrt{3}}{2} & 0 & 1 & 0\\
+ 0 & 1 & 0 & \tfrac{\sqrt{3}}{2}\\
+ 0 & 0 & \tfrac{\sqrt{3}}{2} & 0
+\end{pmatrix},\quad
+\hat{I}_y =
+\begin{pmatrix}
+ 0 & -i\tfrac{\sqrt{3}}{2} & 0 & 0\\
+ i\tfrac{\sqrt{3}}{2} & 0 & -i & 0\\
+ 0 & i & 0 & -i\tfrac{\sqrt{3}}{2}\\
+ 0 & 0 & i\tfrac{\sqrt{3}}{2} & 0
+\end{pmatrix}.
+\end{equation}
+
+\subsection{Quadrupolar Hamiltonian}
+\begin{equation}
+\mathcal{H}_Q = \frac{h\,\nu_z}{6}\left[3\hat{I}_z^2 - I^2 + \eta\,(\hat{I}_x^2 - \hat{I}_y^2)\right],\quad \nu_Q = \nu_z\sqrt{1-\eta^2/3}\,.
+\end{equation}
+
+\subsection{Hyperfine Interaction and Total Hamiltonian}
+\begin{align}
+\mathcal{H}_{\mathrm{hf}} &= \gamma\,\hbar\, \hat{\mathbf{I}}\cdot\mathbb{A}\cdot\hat{\mathbf{S}}\,,\\
+\mathcal{H}_{\mathrm{tot}} &= \mathcal{H}_Z + \mathcal{H}_{\mathrm{hf}} + \mathcal{H}_Q\,.
+\end{align}
+
+\subsection{Exact Diagonalization Procedure (Vectorized)}
+This section outlines the ED workflow used in pySimNMR to compute levels and allowed transitions efficiently across sweeps and orientation grids.
+
+We build the Hamiltonian in a way that allows rotations of the principal axes of the shift (hyperfine) tensor and EFG tensor. In the current implementation these principal axes are locked (coincident), though separating them with a second set of Euler angles for the EFG is straightforward in future revisions. The approach is energy/frequency domain (no time-domain sequence simulation).
+
+The method leverages NumPy vectorization to solve many eigenproblems at once. For example, we can feed arrays of field values \(H_0\), Euler angles, or \(\eta\) and compute eigenpairs in batches without Python loops, dramatically reducing compute time for powder patterns or field sweeps.
+
+Hyperfine terms are separated into a field-dependent shift tensor \(\mathbb{K}\) and field-independent contributions (internal field Zeeman interaction with \(\vec{H}_{\mathrm{int}}\) and the quadrupolar Hamiltonian \(\mathcal{H}_Q\)). We assume the external field does not modify \(\vec{H}_{\mathrm{int}}\).
+
+We construct the spin operators \(I_z\), \(I_x\), \(I_y\), and \(I_\pm\) and rotation operators in 3D and spin space. The 3D rotation matrices for rotations about \(x,y,z\) are the familiar forms, for example
+\begin{equation}
+\begin{aligned}
+r_x &=
+\begin{pmatrix}
+1 & 0 & 0\\
+0 & \cos\theta & -\sin\theta\\
+0 & \sin\theta & \cos\theta
+\end{pmatrix},\quad
+r_y =
+\begin{pmatrix}
+\cos\theta & 0 & -\sin\theta\\
+0 & 1 & 0\\
+\sin\theta & 0 & \cos\theta
+\end{pmatrix},\quad
+r_z =
+\begin{pmatrix}
+\cos\theta & -\sin\theta & 0\\
+\sin\theta & \cos\theta & 0\\
+0 & 0 & 1
+\end{pmatrix}.
+\end{aligned}
+\end{equation}
+In practice we use arrays of such matrices with shape \((N,3,3)\) for vectorized rotation of many orientations.
+
+Spin-space rotation matrices are defined by
+\begin{equation}
+\mathcal{R}_{x,y,z} = \exp\bigl(i\,\theta\,\hat{I}_{x,y,z}\bigr)\,.
+\end{equation}
+For performance, we compute \(\mathcal{R}\) via eigen-decomposition rather than \verb|expm|: if \(\hat{I}_{\alpha}\) has eigen-decomposition \(U D U^{\dagger}\), then \(\exp(i\,\theta\,\hat{I}_{\alpha}) = U\,\exp(i\,\theta D)\,U^{\dagger}\). In code:
+\begin{lstlisting}[language=Python]
+e, U = np.linalg.eig(1j*theta[:,None,None]*Ix)
+Ui = np.transpose(np.conj(U), (0,2,1))
+expD = np.eye(dim) * np.exp(e)[:,None,:]
+Rx = U @ expD @ Ui  # shape: (N, dim, dim)
+\end{lstlisting}
+
+The shift tensor
+\begin{equation}
+\mathbb{K}^{\mathrm{init}} = \mathrm{diag}(K_a, K_b, K_c)/100
+\end{equation}
+is rotated by Euler angles \(\phi_z,\,\theta_{x'},\,\psi_{z'}\) using real-space rotations \(r\) and \(r_i=r^\top\):
+\begin{equation}
+\mathbb{K} = r\,\mathbb{K}^{\mathrm{init}}\,r_i\,.
+\end{equation}
+The Zeeman term then reads
+\begin{equation}
+\mathcal{H}_Z = \gamma\,(\mathbbm{1}+\mathbb{K})\cdot\vec{H}_0\,,\quad \vec{H}_0=H_0\,\hat{z}\,.
+\end{equation}
+An internal Zeeman term is included by rotating the internal field vector in the same way,
+\begin{equation}
+\vec{H}_{\mathrm{int}} = r\,\vec{H}_{\mathrm{int}}^{\mathrm{init}}\,,\qquad
+\mathcal{H}_{Z,\mathrm{int}} = \gamma\,\vec{H}_{\mathrm{int}}\cdot\hat{\vec{I}}\,.
+\end{equation}
+The quadrupolar Hamiltonian is rotated in spin space using the spin-space rotations \(\mathcal{R},\mathcal{R}_i\):
+\begin{equation}
+\mathcal{H}_Q = \mathcal{R}\,\mathcal{H}_Q^{\mathrm{init}}\,\mathcal{R}_i\,,\qquad
+\mathcal{R}=\mathcal{R}(\psi_{z'})\,\mathcal{R}(\theta_{x'})\,\mathcal{R}(\phi_z)\,.
+\end{equation}
+The total Hamiltonian is
+\begin{equation}
+\mathcal{H}_{\mathrm{tot}} = \mathcal{H}_Z + \mathcal{H}_{Z,\mathrm{int}} + \mathcal{H}_Q\,.
+\end{equation}
+
+We then diagonalize batched arrays of \(\mathcal{H}_{\mathrm{tot}}\) via \verb|numpy.linalg.eig|, obtaining eigenvalues (levels) and column-wise eigenvectors. Allowed transitions and their intensities follow from matrix elements of \(I_x\) or equivalently \(I_\pm\):
+\begin{equation}
+P = \bigl(U^{\dagger}\,\hat{I}^+\,U\bigr)^2\,.
+\end{equation}
+By indexing the non-negligible elements of \(P\), we associate each transition with its initial/final levels and compute resonant frequencies (energy differences) and relative intensities.
+
+\subsection{Powder spectra from internal field distributions}
+A powder spectrum can be assembled from a probability distribution over internal fields.
+Given PAS-aligned samples \(\vec{H}_{\mathrm{int}}^{(i)}\) with weights \(w_i\), the helper
+\verb|freq_spectrum_from_internal_field_distribution| loops over the samples, invokes
+\verb|freq_spec_ed| for each, and accumulates the weighted spectra. Euler-angle stacks
+\verb|euler_angles_rad| can be provided when the PAS orientation varies across samples; the
+matrices returned by \verb|generate_r_matrices| and \verb|generate_r_spin_matrices| are reused
+under the hood for each internal field draw. Weights are normalized automatically.
+\begin{lstlisting}[language=Python]
+from pysimnmr.core import SimNMR
+from pysimnmr.hyperfine_distribution import freq_spectrum_from_internal_field_distribution
+
+sim = SimNMR('1H')
+freq_axis = np.linspace(18.0, 24.0, 512)
+hint_samples = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.05]])
+weights = np.array([0.7, 0.3])
+
+spectrum = freq_spectrum_from_internal_field_distribution(
+    sim,
+    freq_axis,
+    hint_pas_samples_T=hint_samples,
+    weights=weights,
+    Ka=0.0, Kb=0.0, Kc=0.0,
+    vQ_MHz=0.1, eta=0.0, H0_T=0.5,
+    FWHM_MHz=0.05,
+)
+\end{lstlisting}
+\noindent The sampled internal fields can be visualized interactively using
+\verb|save_internal_field_distribution_html|, which emits a Plotly 3D scatter
+plot colored by the supplied weights. Example scripts
+(\verb|examples/internal_field_powder_xy_plane.py|) demonstrate a 75As
+distribution restricted to the xy-plane at zero applied field. The same
+parameters are encoded in the YAML file
+\verb|examples/hyperfine_distribution_xy_plane.py|, which can be executed via
+\verb|nmr-hyperfine --config ...|. A typical configuration specifies probability
+distributions explicitly, e.g.
+\begin{lstlisting}
+hyperfine_distribution:
+  samples: 1000
+  seed: 20251007
+  plane: xy
+  angle_distribution:
+    type: uniform
+  magnitude_distribution:
+    type: gaussian
+    mean_T: 0.20
+    sigma_T: 0.04
+  weights:
+    type: equal
+
+# Uniform directions with fixed magnitude in the xy plane:
+# hyperfine_distribution:
+#   samples: 1000
+#   seed: 20251007
+#   plane: xy
+#   angle_distribution:
+#     type: uniform
+#   magnitude_distribution:
+#     type: delta
+#     value_T: 0.20
+#   weights:
+#     type: equal
+\end{lstlisting}
+Explicit vectors with their own probabilities can be supplied instead via the \verb|vectors| and \verb|weights| keys.
+Custom vector generators can also be registered by setting \verb|allow_custom_generators: true| in the YAML and pointing \verb|custom_generator.module|/\verb|function| to user code that returns vectors (and optional weights).
+
+\subsection{From Equations to Code}
+The following objects in the implementation correspond to the equations above (see \verb|pysimnmr/core.py|):
+\begin{itemize}
+  \item Real-space rotations: \verb|generate_r_matrices(phi, theta, psi)| produce \(r, r^{\top}\).
+  \item Spin-space rotations: \verb|generate_r_spin_matrices(phi, theta, psi)| produce \(\mathcal{R}, \mathcal{R}^{\dagger}\).
+  \item Level sweeps: \verb|elevels_vs_field_ed(...)| assembles \(\mathcal{H}_{\mathrm{tot}}\) across \(H_0\) and diagonalizes.
+  \item Transition frequencies: \verb|exact_diag(...)| returns the allowed transitions/probabilities directly from \(U^{\dagger} I_x U\) (the deprecated \verb|freq_prob_trans_ed| helper remains for historical reference only).
+  \item Spectrum constructors: \verb|freq_spec_ed_mix(...)| (frequency sweeps) and \verb|field_spec_edpp(...)| (field sweeps) wrap \verb|exact_diag| output with histogramming/broadening.
+  \item CLI: \verb|nmr-field|, \verb|nmr-elevels|, \verb|nmr-vary-eta|, \verb|nmr-vary-angle|, \verb|nmr-freq|, \verb|nmr-field-spec|, \verb|nmr-freq-powder|, and the matching fitters all share the same YAML/Python config model.
+\end{itemize}
+
+\subsection{Second-Order Perturbation Expressions}
+For regimes where \(\nu_L\gg\nu_Q\), second-order expressions are useful and fast. We retain classical formulas for powder patterns and central-transition shifts following Baugher et al.~\cite{Baugher_1969_NMR_powder_patterns} and Taylor et al.~\cite{Taylor_1975_NMR_powder_patterns}. Use ED near level crossings or when \(\eta\neq 0\) effects are significant.
+
+\subsection{Isotope Data}
+Gyromagnetic ratios, quadrupole moments, and spin values follow Harris et al.~\cite{Harris_2001_NMR_nomenclature}. See \verb|pysimnmr/isotopeDict.py|.
+
+% ahoy_codex: ill grab the jupyter notebook used to calculate the gyromagnetic ratios so that can be integrated into a devel folder. once added, please explain the method of calculation in this section.
+
+\section{Validation Against Published Data}
+
+The table below summarizes which CLIs and example configs have been exercised
+against experimental data from the literature.
+\textbf{Status codes:}
+Partial -- simulation ran and reproduced the general lineshape but some features
+did not agree; retained as a starting point for refinement.
+Pending -- config exists with literature parameters but has not yet been compared
+against a digitized experimental spectrum.
+
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{2.6cm}p{1.8cm}p{2.6cm}p{4.8cm}p{2.8cm}}
+\hline
+\textbf{Compound} & \textbf{Nucleus} & \textbf{CLI} & \textbf{Config file} & \textbf{Status} \\
+\hline
+PuMeCl & $^{35}$Cl, $^{37}$Cl &
+  \texttt{nmr-field-powder} &
+  \texttt{examples/reference/powder/} \newline
+  \texttt{field\_spectrum\_Mounce\_2016.py} &
+  Partial -- general lineshape reproduced; small features differ, likely
+  due to \texttt{mtx\_elem\_min} being too low.
+  See Ref.~\cite{Mounce_2016_PuMeCl} \\
+\hline
+PuB$_4$ & $^{11}$B &
+  \texttt{nmr-field-powder} &
+  \texttt{examples/reference/powder/} \newline
+  \texttt{field\_spectrum\_borides.py} &
+  Pending -- placeholder parameters; validate against Blackwell et al. \\
+\hline
+BaFe$_2$As$_2$ & $^{75}$As &
+  \texttt{nmr-freq} &
+  \texttt{examples/reference/multisite/} \newline
+  \texttt{freq\_spectrum.py} &
+  Pending -- parameters consistent with iron-pnictide literature; validate
+  against Kitagawa et al. \\
+\hline
+75As / 73Ge (synthetic) & $^{75}$As, $^{73}$Ge &
+  \texttt{nmr-hyperfine} &
+  \texttt{examples/hyperfine\_distribution\_xy\_plane.py},
+  \texttt{hyperfine\_uniform\_xy\_plane\_73Ge.py} &
+  Pending -- synthetic demo of internal-field workflow; needs a published
+  reference compound for validation \\
+\hline
+\end{tabular}
+\caption{Summary of reference configs and their validation status against
+published experimental NMR data. See \texttt{TODO.md} for the planned
+validation roadmap.}
+\label{tab:validation}
+\end{table}
+
+\section{References}
+\bibliography{references}
+
+\end{document}

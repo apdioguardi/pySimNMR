@@ -1,0 +1,39 @@
+multisite:
+  single_isotopes: true
+  three_isotopes: true
+
+powder:
+  freq: true
+  field: true
+
+fit:
+  multisite: true
+  powder: true
+
+vary:
+  freq_vs_field: true
+  elevels_vs_field: true
+  freq_vs_eta: true
+  freq_vs_angle: true
+
+freq:
+  multisite_ed: true
+
+freq_fit:
+  multisite: true
+
+field_spec:
+  multisite: true
+
+field_fit:
+  multisite: true
+field_powder:
+  modern: true
+field_powder_fit:
+  modern: true
+
+freq_powder:
+  modern: true
+
+freq_powder_fit:
+  modern: true

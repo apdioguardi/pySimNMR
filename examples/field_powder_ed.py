@@ -1,0 +1,28 @@
+"""Exact-diagonalisation config for nmr-field-powder smoke tests."""
+
+CONFIG = {
+    'isotope_list': ['51V'],
+    'site_multiplicity_list': [1.0],
+    'Ka_list': [1.65],
+    'Kb_list': [1.0],
+    'Kc_list': [0.8],
+    'vQ_list': [0.445],
+    'eta_list': [0.7],
+    'Hinta_list': [0.0],
+    'Hintb_list': [0.0],
+    'Hintc_list': [0.0],
+    'f0': 34.75,
+    'sim_type': 'exact diag',
+    'min_field': 2.85,
+    'max_field': 3.25,
+    'n_field_points': 250,
+    'delta_f0': 0.015,
+    'convolution_function_list': ['gauss'],
+    'conv_FWHM_list': [0.005],
+    'conv_vQ_FWHM_list': [1e-8],
+    'mtx_elem_min': 0.5,
+    'plot_individual_bool': True,
+    'plot_sum_bool': True,
+    'plot_legend_width_ratio': [3.25, 1.0],
+    'sim_export_file': '',
+}

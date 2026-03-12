@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pySimNMR"
+version = "1.0.15"
+description = "NMR spectral simulation via exact diagonalization of the nuclear spin Hamiltonian"
+readme = "README_OVERLAY.txt"
+requires-python = ">=3.9"
+authors = [{ name = "A.P. Dioguardi" }]
+license = { text = "MIT" }
+
+# Core runtime dependencies
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.9",
+  "pyyaml>=6.0",
+  "pydantic>=2.12",
+  "h5py>=3.14.0",
+  "lmfit>=1.3.4",
+  "joblib>=1.5.2",
+  "plotly>=5.0",
+  "kaleido>=0.2.1",
+  "tqdm>=4.66"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pysimnmr*"]
+
+[project.scripts]
+nmr-field = "pysimnmr.vary_cli:field_main"
+nmr-elevels = "pysimnmr.vary_cli:elevels_main"
+nmr-vary-eta = "pysimnmr.vary_cli:vary_eta_main"
+nmr-vary-angle = "pysimnmr.vary_cli:vary_angle_main"
+nmr-sweep = "pysimnmr.vary_cli:legacy_main"
+nmr-freq = "pysimnmr.freq_cli:main"
+nmr-freq-fit = "pysimnmr.freq_fit:main"
+nmr-field-spec = "pysimnmr.field_cli:main"
+nmr-field-fit = "pysimnmr.field_fit:main"
+nmr-freq-powder = "pysimnmr.powder_freq_cli:main"
+nmr-freq-powder-fit = "pysimnmr.powder_freq_fit:main"
+nmr-field-powder = "pysimnmr.powder_field_cli:main"
+nmr-field-powder-fit = "pysimnmr.powder_field_fit:main"
+nmr-hyperfine = "pysimnmr.hyperfine_cli:main"
+
+[project.optional-dependencies]
+test = [
+  "pytest>=7.0"
+]
+
+[tool.setuptools]
+py-modules = ["pySimNMR"]

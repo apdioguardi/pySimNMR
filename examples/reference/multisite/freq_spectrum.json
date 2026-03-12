@@ -1,0 +1,32 @@
+{
+  "isotope_list": ["75As"],
+  "site_multiplicity_list": [1.0],
+  "Ka_list": [0.0],
+  "Kb_list": [0.0],
+  "Kc_list": [0.0],
+  "vc_list": [11.1],
+  "eta_list": [0.0],
+  "Hint_list": [
+    {"x": 0.0, "y": 0.0, "z": 0.0}
+  ],
+  "phi_z_deg_list": [0.0],
+  "theta_x_prime_deg_list": [0.0],
+  "psi_z_prime_deg_list": [0.0],
+  "H0": 5.0,
+  "sim_type": "exact diag",
+  "min_freq": 20.0,
+  "max_freq": 55.0,
+  "n_freq_points": 1000,
+  "convolution_function_list": ["gauss"],
+  "conv_FWHM_list": [0.4],
+  "conv_vQ_FWHM_list": [0.1],
+  "matrix_element_cutoff": 0.5,
+  "plot_individual_bool": true,
+  "plot_sum_bool": true,
+  "plot_legend_width_ratio": [3.25, 1.0],
+  "x_axis_min": 20.0,
+  "x_axis_max": 55.0,
+  "y_axis_min": 0.0,
+  "y_axis_max": 1.1,
+  "sim_export_file": "output/reference/freq_spectrum_multisite.txt"
+}
