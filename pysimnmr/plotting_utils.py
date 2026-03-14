@@ -138,10 +138,18 @@ def format_parameter_value(value: Any) -> str:
 
 def _extract_value(entry: Any) -> Any:
     if hasattr(entry, "value"):
-        val = getattr(entry, "value")
-        return _extract_value(val)
-    if isinstance(entry, (list, tuple)) and len(entry) == 1:
-        return _extract_value(entry[0])
+        return _extract_value(getattr(entry, "value"))
+    if isinstance(entry, (list, tuple)):
+        if len(entry) == 0:
+            return None
+        if len(entry) == 1:
+            return _extract_value(entry[0])
+        # Multi-element list where the first item is not a string expression:
+        # treat as a ParameterSpec-style entry [value, vary] or
+        # [value, vary, min, max] and extract only the display value.
+        # String-first lists (expression constraints) are left intact.
+        if not isinstance(entry[0], str):
+            return _extract_value(entry[0])
     return entry
 
 

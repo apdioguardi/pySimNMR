@@ -1,4 +1,15 @@
-"""Powder field spectrum fitting CLI built on the shared simulation helper."""
+"""Powder field spectrum fitting CLI built on the shared simulation helper.
+
+NOTE: This module is still under active development. In particular:
+  - MCMC-based uncertainty estimation (n_mcmc_steps > 0) is experimental and
+    may be slow for large n_samples / many free parameters.
+  - The default algorithm ('nelder', Nelder-Mead simplex) is derivative-free
+    and recommended for powder ED spectra where finite-difference gradients
+    are unreliable due to the stochastic nature of the simulation.
+  - Levenberg-Marquardt ('leastsq') is available but not recommended for ED
+    powder patterns; use it only with perturbative (2nd-order) simulations or
+    when n_samples is very large and the spectrum is smooth.
+"""
 from __future__ import annotations
 
 import argparse
@@ -24,6 +35,9 @@ from .plotting_utils import (
 )
 from .plotly_utils import save_lines_html
 from .progress import ProgressManager
+
+# Methods that support the epsfcn (finite-difference step) kwarg.
+_LM_METHODS = {'leastsq', 'least_squares'}
 
 
 @dataclass
@@ -69,10 +83,23 @@ class PowderFieldFitConfig(BaseModel):
     exp_y_scaling: float = 1.0
     exp_y_offset: float = 0.0
 
-    minimization_algorithm: str = 'leastsq'
-    epsilon: Optional[float] = None
+    # 'nelder' (Nelder-Mead simplex) is the recommended default for ED powder
+    # spectra because the objective function is not smooth enough for gradient-
+    # based methods to compute reliable finite-difference Jacobians.
+    minimization_algorithm: str = 'nelder'
+    epsilon: Optional[float] = None   # only used by leastsq / least_squares
     verbose_bool: bool = False
     max_nfev: Optional[int] = None
+
+    # MCMC uncertainty estimation (experimental).
+    # Set n_mcmc_steps > 0 to run an emcee MCMC chain after the primary
+    # optimization and report posterior means and standard deviations for each
+    # free parameter.  n_mcmc_walkers controls the ensemble size; a value of
+    # at least 2 * (number of free parameters) is required by emcee.
+    # WARNING: each step calls the full powder ED simulation, so runtimes can
+    # be very long for realistic n_samples values.
+    n_mcmc_steps: int = 0
+    n_mcmc_walkers: int = 100
 
     isotope_list: List[str]
     f0: float
@@ -338,24 +365,83 @@ class PowderFieldFitRunner:
         return diff
 
     def fit(self, max_nfev: Optional[int] = None) -> lmfit.MinimizerResult:
+        """Run the primary minimization.
+
+        Uses the algorithm specified by cfg.minimization_algorithm.
+        epsfcn (finite-difference step size) is only forwarded to gradient-
+        based LM methods; derivative-free methods ignore it.
+        """
         minimizer = lmfit.Minimizer(self.residual, self.params)
-        total_evals = max_nfev or self.cfg.max_nfev or 200
-        total_int = max(1, int(total_evals))
+        # Use an indeterminate bar (total=None) because the number of function
+        # evaluations is not known ahead of time; derivative-free methods like
+        # Nelder-Mead routinely exceed a naive 200-iteration estimate.
         if self.progress is not None and self.progress.enabled:
-            self._fit_bar = self.progress.bar(total=total_int, desc='Fitting (powder field)')
+            self._fit_bar = self.progress.bar(total=None, desc='Fitting (powder field)')
         else:
             self._fit_bar = None
 
+        method = self.cfg.minimization_algorithm.strip().lower()
+
+        # epsfcn is a Levenberg-Marquardt-specific kwarg; passing it to
+        # derivative-free methods raises a TypeError in scipy.
+        extra_kwargs: Dict[str, Any] = {}
+        if method in _LM_METHODS and self.cfg.epsilon is not None:
+            extra_kwargs['epsfcn'] = self.cfg.epsilon
+
         try:
-            result = minimizer.minimize(method=self.cfg.minimization_algorithm,
-                                        epsfcn=self.cfg.epsilon,
-                                        max_nfev=max_nfev or self.cfg.max_nfev)
+            result = minimizer.minimize(method=method,
+                                        max_nfev=max_nfev or self.cfg.max_nfev,
+                                        **extra_kwargs)
         finally:
             if self._fit_bar is not None:
                 self._fit_bar.complete()
                 self._fit_bar.close()
                 self._fit_bar = None
         return result
+
+    def run_mcmc(self,
+                 result: lmfit.MinimizerResult,
+                 n_steps: int,
+                 n_walkers: int) -> lmfit.MinimizerResult:
+        """Run an emcee MCMC chain starting from the best-fit parameters.
+
+        This is an experimental feature intended to provide posterior
+        uncertainty estimates for the free NMR parameters.  Each MCMC step
+        calls the full powder ED simulation, so total runtime scales as
+        n_steps * n_walkers * (time per simulation).  Use small n_steps
+        (e.g. 100-300) for exploratory runs.
+
+        Returns an lmfit MinimizerResult whose .params have the median
+        posterior values and whose .flatchain can be used for corner plots.
+        """
+        import sys
+        print(
+            "[pySimNMR] Starting MCMC uncertainty estimation "
+            f"({n_walkers} walkers, {n_steps} steps). "
+            "This may take a long time for large n_samples values.",
+            file=sys.stderr,
+        )
+        # emcee requires at least 2 * n_free walkers; enforce a safe minimum.
+        n_free = sum(1 for p in result.params.values() if p.vary)
+        min_walkers = max(n_walkers, 2 * n_free + 2)
+        if min_walkers > n_walkers:
+            print(
+                f"[pySimNMR] Increasing n_mcmc_walkers from {n_walkers} to "
+                f"{min_walkers} (emcee requires >= 2 * n_free_params + 2).",
+                file=sys.stderr,
+            )
+
+        minimizer = lmfit.Minimizer(self.residual, result.params)
+        mcmc_result = minimizer.minimize(
+            method='emcee',
+            params=result.params,
+            nwalkers=min_walkers,
+            steps=n_steps,
+            burn=max(1, n_steps // 5),   # discard first 20% as burn-in
+            thin=1,
+            is_weighted=False,
+        )
+        return mcmc_result
 
     def save_exports(self,
                      field_axis: np.ndarray,
@@ -504,8 +590,59 @@ def _plot_fit(exp_x: np.ndarray,
     )
 
 
+def _print_fit_summary(result: lmfit.MinimizerResult,
+                       mcmc_result: Optional[lmfit.MinimizerResult],
+                       cfg: PowderFieldFitConfig,
+                       verbose: bool) -> None:
+    """Print fit quality and parameter values/uncertainties to stdout."""
+    import sys
+
+    method = cfg.minimization_algorithm.strip().lower()
+    is_derivative_free = method not in _LM_METHODS
+
+    if verbose:
+        print(lmfit.fit_report(result))
+    else:
+        print(f"nmr-field-powder-fit: reduced chi-square = {result.redchi:.4g}")
+
+    # Warn when the primary optimizer cannot provide covariance-based error bars.
+    if is_derivative_free and mcmc_result is None:
+        print(
+            f"[pySimNMR] Note: '{method}' is a derivative-free method and does not "
+            "produce covariance-based parameter uncertainties.\n"
+            "  To obtain error bars, set n_mcmc_steps > 0 in your config to run\n"
+            "  an MCMC chain after optimization (experimental, slow).",
+            file=sys.stderr,
+        )
+
+    if mcmc_result is not None:
+        _print_mcmc_summary(mcmc_result)
+
+
+def _print_mcmc_summary(mcmc_result: lmfit.MinimizerResult) -> None:
+    """Print posterior means and standard deviations from the MCMC chain."""
+    print("\nMCMC posterior parameter estimates (mean +/- std):")
+    print("-" * 55)
+    # flatchain is a dict of {param_name: array_of_samples}
+    if hasattr(mcmc_result, 'flatchain') and mcmc_result.flatchain is not None:
+        for name, samples in mcmc_result.flatchain.items():
+            mean = float(np.mean(samples))
+            std = float(np.std(samples))
+            print(f"  {name:<30s}  {mean:>12.6g}  +/-  {std:.6g}")
+    else:
+        # Fall back to lmfit param stderr if flatchain is unavailable.
+        for name, param in mcmc_result.params.items():
+            if param.vary:
+                stderr = param.stderr if param.stderr is not None else float('nan')
+                print(f"  {name:<30s}  {param.value:>12.6g}  +/-  {stderr:.6g}")
+    print("-" * 55)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description='Fit powder field spectra using lmfit.')
+    parser = argparse.ArgumentParser(
+        description='Fit powder field spectra using lmfit. '
+                    '(NOTE: this script is under active development.)'
+    )
     parser.add_argument('--config', type=Path, required=True,
                         help='Configuration file (.py/.yml/.json).')
     parser.add_argument('--out', type=Path, default=Path('output/field_powder_fit'),
@@ -542,6 +679,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     result = runner.fit(max_nfev=args.max_nfev)
     field_axis, fitted, per_site, labels = runner.simulate(result.params, show_progress=True)
 
+    # Optional MCMC uncertainty estimation (experimental).
+    mcmc_result = None
+    if cfg.n_mcmc_steps > 0:
+        mcmc_result = runner.run_mcmc(result, cfg.n_mcmc_steps, cfg.n_mcmc_walkers)
+
+    _print_fit_summary(result, mcmc_result, cfg, cfg.verbose_bool)
+
     save_fig = args.save_fig or args.out.with_suffix(f'.{args.fig_format}')
     html_path = args.out.with_suffix('.html')
     rendered = _plot_fit(
@@ -559,11 +703,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         args.dpi,
     )
     runner.save_exports(field_axis, fitted, per_site, labels, args.out)
-
-    if cfg.verbose_bool:
-        print(lmfit.fit_report(result))
-    else:
-        print(f"nmr-field-powder-fit: reduced chi-square = {result.redchi:.4g}")
 
     finalize_rendered_figure(rendered, show_plot)
 

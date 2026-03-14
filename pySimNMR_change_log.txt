@@ -7,6 +7,25 @@ Contact Adam Dioguardi with any questions (adioguardi@gmail.com)
 ###############################################################################
 ###############################################################################
 
+v1.0.16 - 2026-03-14 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Windows packaging fix
+  - Added `exclude = [".venv*", "*.egg-info*"]` to `[tool.setuptools.packages.find]` so setuptools no longer traverses the `.venv/` tree during `pip install -e .`, reducing install time from ~1 hour to seconds on Windows.
+- Dependency pin
+  - Pinned `kaleido>=0.2.1,<1.0` to prevent the kaleido 1.x series from being installed; kaleido 1.x changed its API in a way that breaks plotly's `write_image` and caused placeholder-PNG warnings.
+- ED powder field fitting CLI (`nmr-field-powder-fit`)
+  - Default minimisation algorithm changed from `leastsq` (Levenberg–Marquardt) to `nelder` (Nelder–Mead), which is appropriate for the stochastic/noisy objective function produced by powder ED spectra.
+  - Added MCMC-based uncertainty estimation via lmfit's `emcee` backend (`n_mcmc_steps`, `n_mcmc_walkers` config keys); disabled by default and labelled as experimental.
+  - Fixed a `TypeError` crash: `epsfcn` (an LM-specific finite-difference step kwarg) is now only forwarded to `minimizer.minimize()` when an LM method is selected; derivative-free methods no longer receive it.
+  - Module docstring and example script now carry a visible "under active development" notice.
+- Plotly parameter table fix
+  - `_extract_value()` in `plotting_utils.py` now correctly unwraps multi-element ParameterSpec-style lists (e.g. `[1.65, True, 1.0, 2.0]`) to their scalar display value, eliminating spurious `<br>` separators between parameter name components in Plotly table cells.
+- Progress bar improvements
+  - Added `_needs_ascii()` detection in `progress.py`: on Windows (or any terminal with non-UTF-8 encoding) tqdm is now initialised with `ascii=True`, replacing Unicode block characters (which displayed as `?`) with plain `#` fill characters.
+  - Outer/stage progress bars now default to `leave=True` so they remain visible after completion; only transient inner bars pass `leave=False`.
+  - Fitting bars in all fitter modules (`powder_field_fit`, `powder_freq_fit`, `field_fit`, `freq_fit`) changed to indeterminate (`total=None`) because the number of function evaluations is not known in advance; this prevents the bar from overflowing when derivative-free optimisers run more iterations than the old hardcoded default of 200.
+  - Added `set_description(desc)` method to all bar classes (`_BaseBar`, `_TqdmBar`, `_NullBar`, `_SimpleBar`) so callers can relabel a bar in-place without creating a new one.
+  - `powder_field_simulation.py`: replaced the two-bar architecture (a coarse stage bar counting sites + a transient solver bar counting field points that disappeared after each site) with a single persistent bar whose `total = n_H0_points × n_sites` (ED) or `n_samples × n_sites` (perturbative). The description updates to "Generating rotation matrices" during cache generation and to `"Field powder: {isotope} ({idx+1}/{n_sites})"` per site, giving tqdm accurate data for ETA calculation throughout the run.
+
 v1.0.15 - 2026-02-13 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - Plotly-only renderer
   - Removed the legacy fallback renderer and plot-backend plumbing now that every CLI uses the shared Plotly helpers (with kaleido for static exports). Docs/tests/packaging now focus solely on the Plotly stack.

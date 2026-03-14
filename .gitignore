@@ -33,7 +33,8 @@ doc/*.fls
 doc/*.log
 doc/*.out
 doc/*.toc
+doc/build_manual.sh
+doc/Makefile
 
 # Project-local files (not for public repo)
-TODO.md
-ai_prompts
+devel/

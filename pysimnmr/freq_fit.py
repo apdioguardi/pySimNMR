@@ -409,10 +409,10 @@ class FrequencyFitRunner:
 
     def fit(self, max_nfev: Optional[int] = None) -> lmfit.MinimizerResult:
         minimizer = lmfit.Minimizer(self.residual, self.params)
-        total_evals = max_nfev or self.cfg.max_nfev or 200
-        total_int = max(1, int(total_evals))
+        # Use an indeterminate bar (total=None) because the number of function
+        # evaluations is not known ahead of time.
         if self.progress is not None and self.progress.enabled:
-            self._fit_bar = self.progress.bar(total=total_int, desc='Fitting (freq)')
+            self._fit_bar = self.progress.bar(total=None, desc='Fitting (freq)')
         else:
             self._fit_bar = None
 

@@ -52,9 +52,7 @@ from lmfit.parameter import Parameter as lmfit_Parameter
 class SimNMR(object):
     def __init__(self, isotope):
         self.isotope = isotope
-
-        #ahoy! incomplete!
-        #data source: R. K. Harris, et al. "NMR Nomenclature. Nuclear Spin Properties and
+        #data source for isotope dict: R. K. Harris, et al. "NMR Nomenclature. Nuclear Spin Properties and
         #Conventions for Chemical Shifts" doi: 10.1351/pac200173111795
         # I0 = nuclear spin
         # gamma = gyromagnetic ratio in units of MHz/T

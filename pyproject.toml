@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pySimNMR"
-version = "1.0.15"
+version = "1.0.16"
 description = "NMR spectral simulation via exact diagonalization of the nuclear spin Hamiltonian"
 readme = "README_OVERLAY.txt"
 requires-python = ">=3.9"
@@ -21,13 +21,14 @@ dependencies = [
   "lmfit>=1.3.4",
   "joblib>=1.5.2",
   "plotly>=5.0",
-  "kaleido>=0.2.1",
+  "kaleido>=0.2.1,<1.0",
   "tqdm>=4.66"
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pysimnmr*"]
+exclude = [".venv*", "*.egg-info*"]
 
 [project.scripts]
 nmr-field = "pysimnmr.vary_cli:field_main"

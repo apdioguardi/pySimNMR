@@ -1,4 +1,7 @@
-"""Compact ED config for nmr-field-powder-fit smoke tests."""
+"""Compact ED config for nmr-field-powder-fit smoke tests.
+
+NOTE: nmr-field-powder-fit is under active development.
+"""
 from pathlib import Path
 
 DATA_FILE = Path(__file__).resolve().parent / 'data' / 'field_powder_fit_ed_sample.txt'
@@ -11,7 +14,10 @@ CONFIG = {
     'exp_x_scaling': 1.0,
     'exp_y_scaling': 1.0,
 
-    'minimization_algorithm': 'leastsq',
+    # 'nelder' (Nelder-Mead simplex) is recommended for ED powder spectra.
+    # Levenberg-Marquardt ('leastsq') is available for perturbative simulations
+    # but may produce unreliable gradients for stochastic ED calculations.
+    'minimization_algorithm': 'nelder',
     'epsilon': None,
     'verbose_bool': False,
 

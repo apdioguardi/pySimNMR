@@ -1,6 +1,5 @@
-#ahoy! incomplete!
-#data source unless otherwise noted: R. K. Harris, et al. "NMR Nomenclature. 
-#Nuclear Spin Properties and Conventions for Chemical Shifts" 
+# data source unless otherwise noted: R. K. Harris, et al. "NMR Nomenclature. 
+# Nuclear Spin Properties and Conventions for Chemical Shifts" 
 # doi: 10.1351/pac200173111795
 # need to add 239Pu from Herman Cho's most recent JACS(?) paper
 
@@ -10,6 +9,7 @@
 # Q = barns (1 barn = 1e-28 m^2)
 # abundance = natural isotopic abundance in percent
 # relative_receptivity = relative relative_receptivity to 1H in constant field strength, out of 1
+# I0_string = string version of the spin as a float to one decimal place
 
 #access like H1_gamma = self.isotope_data_dict["1H"]["gamma"]
 # 115In and 113In are not consistent with the Harris standards

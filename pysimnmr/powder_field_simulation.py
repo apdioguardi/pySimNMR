@@ -141,56 +141,50 @@ class PowderFieldResult:
     exp_y: Optional[np.ndarray] = None
 
 
-def _start_bar(progress: ProgressManager | None, total: int, desc: str):
-    if progress is None or total <= 0:
-        return None
-    return progress.bar(total=total, desc=desc)
-
-
-def _finish_bar(bar):
-    if bar is None:  # pragma: no cover - trivial guard
-        return
-    bar.complete()
-    bar.close()
-
-
 def simulate_powder_field(cfg: PowderFieldConfig,
                           progress: ProgressManager | None = None) -> PowderFieldResult:
     per_site = []
     labels = []
 
     H0_axis = np.linspace(cfg.min_field, cfg.max_field, cfg.field_points)
-    rotation_cache = None
-    stage_total = len(cfg.isotope_list) + (1 if cfg.sim_mode == 'ed' else 0)
-    stage_bar = _start_bar(progress, stage_total, 'Field powder simulation')
-    if cfg.sim_mode == 'ed':
-        cache_sim = pySimNMR.SimNMR('1H')
-        rotation_cache = cache_sim.random_rotation_matrices(
-            cfg.isotope_list,
-            recalc_random_samples=cfg.recalc_random_samples,
-            n_samples=cfg.n_samples,
-        )
-        if stage_bar is not None:
-            stage_bar.update(1)
+    n_sites = len(cfg.isotope_list)
 
-    for idx, isotope in enumerate(cfg.isotope_list):
-        sim = pySimNMR.SimNMR(isotope)
-        solver_bar = None
-        if progress is not None:
-            # Each site gets its own solver-level bar so long jobs still show movement while the core runs.
-            solver_total = len(H0_axis) if cfg.sim_mode == 'ed' else int(cfg.n_samples)
-            if solver_total <= 0:
-                solver_total = 1
-            solver_bar = progress.bar(solver_total, f"{isotope} solver")
-        va = cfg.va_list[idx] if cfg.va_list else None
-        vb = cfg.vb_list[idx] if cfg.vb_list else None
+    # Single persistent bar whose total spans all field points across all sites,
+    # giving an accurate ETA.  The description is updated as we move between
+    # phases (rotation-cache generation, then per-site solving).
+    main_bar = None
+    if progress is not None:
         if cfg.sim_mode == 'ed':
-            I0_string = sim.isotope_data_dict[isotope]['I0_string']
-            r = rotation_cache['real_space']['r']
-            ri = rotation_cache['real_space']['ri']
-            r_spin = rotation_cache['spin_space'][f'I0={I0_string}']['r_spin']
-            ri_spin = rotation_cache['spin_space'][f'I0={I0_string}']['ri_spin']
-            try:
+            bar_total = len(H0_axis) * n_sites
+        else:
+            bar_total = int(cfg.n_samples) * n_sites
+        if bar_total > 0:
+            main_bar = progress.bar(total=bar_total, desc='Field powder simulation')
+
+    rotation_cache = None
+    try:
+        if cfg.sim_mode == 'ed':
+            if main_bar is not None:
+                main_bar.set_description('Generating rotation matrices')
+            cache_sim = pySimNMR.SimNMR('1H')
+            rotation_cache = cache_sim.random_rotation_matrices(
+                cfg.isotope_list,
+                recalc_random_samples=cfg.recalc_random_samples,
+                n_samples=cfg.n_samples,
+            )
+
+        for idx, isotope in enumerate(cfg.isotope_list):
+            if main_bar is not None:
+                main_bar.set_description(f'Field powder: {isotope} ({idx + 1}/{n_sites})')
+            sim = pySimNMR.SimNMR(isotope)
+            va = cfg.va_list[idx] if cfg.va_list else None
+            vb = cfg.vb_list[idx] if cfg.vb_list else None
+            if cfg.sim_mode == 'ed':
+                I0_string = sim.isotope_data_dict[isotope]['I0_string']
+                r = rotation_cache['real_space']['r']
+                ri = rotation_cache['real_space']['ri']
+                r_spin = rotation_cache['spin_space'][f'I0={I0_string}']['r_spin']
+                ri_spin = rotation_cache['spin_space'][f'I0={I0_string}']['ri_spin']
                 spec = sim.field_spec_edpp_loop_parallel(
                     f0=cfg.f0_MHz,
                     H0_array=H0_axis,
@@ -214,15 +208,9 @@ def simulate_powder_field(cfg: PowderFieldConfig,
                     broadening_func=cfg.convolution_function_list[idx],
                     save_files_bool=False,
                     out_filename='',
-                    progress_bar=solver_bar,
+                    progress_bar=main_bar,
                 )
-            finally:
-                if solver_bar is not None:
-                    solver_bar.complete()
-                    solver_bar.close()
-                    solver_bar = None
-        else:
-            try:
+            else:
                 spec = sim.sec_ord_field_pp(
                     I0=sim.isotope_data_dict[isotope]['I0'],
                     gamma=sim.isotope_data_dict[isotope]['gamma'],
@@ -238,19 +226,16 @@ def simulate_powder_field(cfg: PowderFieldConfig,
                     max_field=cfg.max_field,
                     broadening_func=cfg.convolution_function_list[idx],
                     FWHM_T=cfg.conv_FWHM_list[idx],
-                    progress_bar=solver_bar,
+                    progress_bar=main_bar,
                 )
-            finally:
-                if solver_bar is not None:
-                    solver_bar.complete()
-                    solver_bar.close()
-                    solver_bar = None
-        spec[:, 1] *= cfg.site_multiplicity_list[idx]
-        per_site.append(spec[:, 1])
-        labels.append(f"{isotope}_{idx}")
-        field_axis = spec[:, 0]
-        if stage_bar is not None:
-            stage_bar.update(1)
+            spec[:, 1] *= cfg.site_multiplicity_list[idx]
+            per_site.append(spec[:, 1])
+            labels.append(f"{isotope}_{idx}")
+            field_axis = spec[:, 0]
+    finally:
+        if main_bar is not None:
+            main_bar.complete()
+            main_bar.close()
 
     exp_x = exp_y = None
     if cfg.exp_data_file:
@@ -266,7 +251,6 @@ def simulate_powder_field(cfg: PowderFieldConfig,
         exp_x = data[:, 0] * cfg.exp_x_scaling
         exp_y = data[:, 1] * cfg.exp_y_scaling + cfg.exp_y_offset
 
-    _finish_bar(stage_bar)
     return PowderFieldResult(
         field_axis=field_axis,
         per_site=per_site,
